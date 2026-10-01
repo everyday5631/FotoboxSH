@@ -2,16 +2,19 @@ package ch.sonnhalde.fotobox.wcm
 
 import android.content.Context
 
-/** Verbindungseinstellungen zu WCMPlus, lokal auf dem Geraet gespeichert. */
+/** Einstellungen (WCMPlus-Drucker und SharePoint-Upload), lokal auf dem Geraet gespeichert. */
 data class WcmConfig(
     val baseUrl: String = DEFAULT_BASE_URL,
     /** Pfad, der fuer den Verbindungstest per GET aufgerufen wird. */
     val statusPath: String = "/",
     /** Optionaler Bearer-Token; leer = keine Authentifizierung. */
     val token: String = "",
+    /** HTTPS-Link des Power-Automate-Flows, der Fotos in SharePoint ablegt (leer = kein Upload). */
+    val flowUrl: String = "",
 ) {
     companion object {
-        const val DEFAULT_BASE_URL = "http://localhost:8080"
+        /** Standardadresse des WCMPlus-Portals (laut Anleitung 192.168.4.1). */
+        const val DEFAULT_BASE_URL = "http://192.168.4.1"
     }
 }
 
@@ -22,6 +25,7 @@ class WcmSettings(context: Context) {
         baseUrl = prefs.getString("baseUrl", WcmConfig.DEFAULT_BASE_URL).orEmpty(),
         statusPath = prefs.getString("statusPath", "/").orEmpty(),
         token = prefs.getString("token", "").orEmpty(),
+        flowUrl = prefs.getString("flowUrl", "").orEmpty(),
     )
 
     fun save(config: WcmConfig) {
@@ -29,6 +33,7 @@ class WcmSettings(context: Context) {
             .putString("baseUrl", config.baseUrl.trim())
             .putString("statusPath", config.statusPath.trim())
             .putString("token", config.token.trim())
+            .putString("flowUrl", config.flowUrl.trim())
             .apply()
     }
 }

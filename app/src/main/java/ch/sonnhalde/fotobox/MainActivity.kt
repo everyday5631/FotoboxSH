@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import ch.sonnhalde.fotobox.ui.Actions
 import ch.sonnhalde.fotobox.ui.MainScreen
 import ch.sonnhalde.fotobox.ui.SonnhaldeTheme
 
@@ -21,11 +22,18 @@ class MainActivity : ComponentActivity() {
                 val state by vm.state.collectAsState()
                 MainScreen(
                     state = state,
-                    onConfigChange = vm::updateConfig,
-                    onCheckConnection = vm::checkConnection,
-                    onQrInput = vm::setQrInput,
-                    onGenerate = vm::generateQr,
-                    onDownload = vm::downloadQr,
+                    actions = Actions(
+                        onConfigChange = vm::updateConfig,
+                        onCheckConnection = vm::checkConnection,
+                        onQrInput = vm::setQrInput,
+                        onGenerate = vm::generateQr,
+                        onDownload = vm::downloadQr,
+                        onOpenCamera = vm::openCamera,
+                        onPhotoCaptured = vm::onPhotoCaptured,
+                        onCameraError = vm::showError,
+                        onRetryUpload = vm::uploadPhoto,
+                        onHome = vm::backToHome,
+                    ),
                 )
             }
         }

@@ -43,19 +43,34 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ch.sonnhalde.fotobox.Screen
 import ch.sonnhalde.fotobox.UiState
+import ch.sonnhalde.fotobox.UploadState
+import ch.sonnhalde.fotobox.camera.CameraScreen
+import ch.sonnhalde.fotobox.print.PhotoPrinter
+import java.io.File
 import ch.sonnhalde.fotobox.wcm.WcmConfig
 import ch.sonnhalde.fotobox.wcm.WcmStatus
 
+class Actions(
+    val onConfigChange: (WcmConfig) -> Unit,
+    val onCheckConnection: () -> Unit,
+    val onQrInput: (String) -> Unit,
+    val onGenerate: () -> Unit,
+    val onDownload: () -> Unit,
+    val onOpenCamera: () -> Unit,
+    val onPhotoCaptured: (File) -> Unit,
+    val onCameraError: (String) -> Unit,
+    val onRetryUpload: () -> Unit,
+    val onHome: () -> Unit,
+)
+
 @Composable
-fun MainScreen(
-    state: UiState,
-    onConfigChange: (WcmConfig) -> Unit,
-    onCheckConnection: () -> Unit,
-    onQrInput: (String) -> Unit,
-    onGenerate: () -> Unit,
-    onDownload: () -> Unit,
-) {
+fun MainScreen(state: UiState, actions: Actions) {
+    if (state.screen == Screen.Camera) {
+        CameraScreen(onCaptured = actions.onPhotoCaptured, onCancel = actions.onHome, onFailure = actions.onCameraError)
+        return
+    }
     Column(Modifier.fillMaxSize().background(Sonn.Cream)) {
         SonnhaldeBanner(title = "Fotobox")
         Column(
@@ -63,15 +78,51 @@ fun MainScreen(
                 .padding(horizontal = 24.dp, vertical = 24.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
-            ConnectionSection(state, onConfigChange, onCheckConnection)
-            QrSection(state, onQrInput, onGenerate, onDownload)
+            if (state.screen == Screen.Result) {
+                ResultSection(state, actions)
+            } else {
+                state.message?.let { Notice(it) }
+                SonnButton("Foto aufnehmen", primary = true, onClick = actions.onOpenCamera)
+                ConnectionSection(state, actions.onConfigChange, actions.onCheckConnection)
+                QrSection(state, actions.onQrInput, actions.onGenerate, actions.onDownload)
+            }
         }
     }
 }
 
+@Composable
+private fun ResultSection(state: UiState, actions: Actions) {
+    val context = LocalContext.current
+    SectionTitle("Fertig", "Ihr Foto")
+    state.photo?.let { photo ->
+        Image(photo.asImageBitmap(), contentDescription = "Foto", modifier = Modifier.fillMaxWidth().border(1.dp, Sonn.Line, MaterialShape))
+        SonnButton("Drucken", primary = true, onClick = { PhotoPrinter.print(context, photo) })
+        Text("Im Druckdialog den Drucker «QW410» und das Papierformat «4 x 6 in.» wählen.", color = Sonn.Stone, fontSize = 13.sp)
+    }
+    when (val u = state.upload) {
+        UploadState.Idle -> Unit
+        UploadState.Uploading -> Text("Foto wird nach SharePoint hochgeladen …", color = Sonn.Stone)
+        is UploadState.Failed -> {
+            Notice(u.reason)
+            SonnButton("Upload wiederholen", primary = false, onClick = actions.onRetryUpload)
+        }
+        is UploadState.Done -> {
+            SectionTitle("Download", "QR-Code zum Foto")
+            state.qrBitmap?.let { bmp ->
+                Box(Modifier.fillMaxWidth().border(1.dp, Sonn.Line, MaterialShape).background(Color.White).padding(16.dp), contentAlignment = Alignment.Center) {
+                    Image(bmp.asImageBitmap(), contentDescription = "QR-Code", modifier = Modifier.size(260.dp))
+                }
+                SonnButton("QR-Code herunterladen", primary = false, onClick = actions.onDownload)
+            }
+        }
+    }
+    state.message?.let { Notice(it) }
+    SonnButton("Neues Foto", primary = true, onClick = actions.onHome)
+}
+
 /** Ueberschrift mit Gold-Linie (GoldRule-Muster des Design-Systems). */
 @Composable
-private fun SectionTitle(eyebrow: String, title: String) {
+internal fun SectionTitle(eyebrow: String, title: String) {
     Column {
         Text(eyebrow.uppercase(), color = Sonn.GoldDeep, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp)
         Text(title, color = Sonn.Navy, fontSize = 24.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
@@ -115,6 +166,7 @@ private fun ConnectionSection(state: UiState, onConfigChange: (WcmConfig) -> Uni
                 SonnField("Adresse von WCMPlus", draft.baseUrl, KeyboardType.Uri) { draft = draft.copy(baseUrl = it) }
                 SonnField("Pfad für Verbindungstest", draft.statusPath, KeyboardType.Uri) { draft = draft.copy(statusPath = it) }
                 SonnField("Token (optional)", draft.token, KeyboardType.Password) { draft = draft.copy(token = it) }
+                SonnField("Upload-Link (Power-Automate-Flow für SharePoint)", draft.flowUrl, KeyboardType.Uri) { draft = draft.copy(flowUrl = it) }
                 SonnButton("Speichern", primary = true, onClick = { onConfigChange(draft); editing = false })
             }
         }
@@ -156,16 +208,16 @@ private fun QrSection(state: UiState, onInput: (String) -> Unit, onGenerate: () 
 }
 
 @Composable
-private fun Notice(text: String) {
+internal fun Notice(text: String) {
     Box(Modifier.fillMaxWidth().background(Sonn.WarnBg).padding(12.dp)) {
         Text(text, color = Sonn.Warn, fontSize = 14.sp)
     }
 }
 
-private val MaterialShape = androidx.compose.foundation.shape.RoundedCornerShape(3.dp)
+internal val MaterialShape = androidx.compose.foundation.shape.RoundedCornerShape(3.dp)
 
 @Composable
-private fun SonnButton(label: String, primary: Boolean, onClick: () -> Unit) {
+internal fun SonnButton(label: String, primary: Boolean, onDark: Boolean = false, onClick: () -> Unit) {
     if (primary) {
         Button(
             onClick = onClick,
@@ -173,17 +225,18 @@ private fun SonnButton(label: String, primary: Boolean, onClick: () -> Unit) {
             colors = ButtonDefaults.buttonColors(containerColor = Sonn.HeadingGold, contentColor = Sonn.Navy),
         ) { Text(label, fontWeight = FontWeight.Bold) }
     } else {
+        val tone = if (onDark) Sonn.Cream else Sonn.Navy
         OutlinedButton(
             onClick = onClick,
             shape = MaterialShape,
-            border = BorderStroke(1.5.dp, Sonn.Navy),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = Sonn.Navy),
+            border = BorderStroke(1.5.dp, tone),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = tone),
         ) { Text(label, fontWeight = FontWeight.Bold) }
     }
 }
 
 @Composable
-private fun SonnField(label: String, value: String, keyboard: KeyboardType, singleLine: Boolean = true, onChange: (String) -> Unit) {
+internal fun SonnField(label: String, value: String, keyboard: KeyboardType, singleLine: Boolean = true, onChange: (String) -> Unit) {
     OutlinedTextField(
         value = value,
         onValueChange = onChange,
