@@ -13,6 +13,7 @@ import ch.sonnhalde.fotobox.photo.PhotoComposer
 import ch.sonnhalde.fotobox.print.IppPrinter
 import ch.sonnhalde.fotobox.qr.QrCode
 import ch.sonnhalde.fotobox.upload.SharePointUploader
+import ch.sonnhalde.fotobox.upload.UploadQueue
 import ch.sonnhalde.fotobox.wcm.WcmClient
 import ch.sonnhalde.fotobox.wcm.WcmConfig
 import ch.sonnhalde.fotobox.wcm.WcmSettings
@@ -58,6 +59,8 @@ data class UiState(
     val copies: Int = 1,
     /** Zaehler, der sich beim Wechsel des Startbildschirm-Hintergrunds erhoeht (zum Neuladen). */
     val bgVersion: Int = 0,
+    /** Fotos, die noch nicht nach SharePoint hochgeladen werden konnten. */
+    val queueCount: Int = 0,
     val printerTest: String? = null,
     val qrInput: String = "",
     val qrBitmap: Bitmap? = null,
@@ -71,11 +74,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val settings = WcmSettings(app)
     private val client = WcmClient()
     private val uploader = SharePointUploader()
+    private val queue = UploadQueue(app)
     private val printer = IppPrinter(app)
     private var photoJpeg: ByteArray? = null
     private var digitalJpeg: ByteArray? = null
 
-    private val _state = MutableStateFlow(UiState(config = settings.load(), retail = Kiosk.isEnabled(app)))
+    private val _state = MutableStateFlow(UiState(config = settings.load(), retail = Kiosk.isEnabled(app), queueCount = UploadQueue(app).count()))
     val state: StateFlow<UiState> = _state.asStateFlow()
 
     init { checkConnection() }
@@ -158,6 +162,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun setCopies(n: Int) = _state.update { it.copy(copies = n.coerceIn(1, MAX_COPIES)) }
 
     fun backToHome() {
+        // Upload fehlgeschlagen und Kunde geht weiter: Foto in die Warteschlange, nichts geht verloren.
+        digitalJpeg?.let { if (_state.value.upload is UploadState.Failed) { queue.add(it); refreshQueue() } }
         photoJpeg = null
         digitalJpeg = null
         _state.update {
@@ -217,7 +223,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     val qr = withContext(Dispatchers.Default) { QrCode.generate(url) }
                     _state.update { it.copy(upload = UploadState.Done(url), qrBitmap = qr, qrInput = url) }
                 },
-                onFailure = { e -> _state.update { it.copy(upload = UploadState.Failed(e.message ?: "Upload fehlgeschlagen")) } },
+                onFailure = { e ->
+                    // Hat der Kunde den Ergebnis-Bildschirm schon verlassen, geht das Foto in die Warteschlange.
+                    if (_state.value.screen != Screen.Result) { queue.add(jpeg); refreshQueue() }
+                    if (_state.value.screen == Screen.Result) {
+                        _state.update { it.copy(upload = UploadState.Failed(e.message ?: "Upload fehlgeschlagen")) }
+                    }
+                },
             )
         }
     }
@@ -250,6 +262,43 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 onFailure = { e -> e.message ?: "Fehler" },
             )
             _state.update { it.copy(printerTest = text) }
+        }
+    }
+
+    // ---- Upload-Warteschlange ----
+
+    fun refreshQueue() = _state.update { it.copy(queueCount = queue.count()) }
+
+    fun retryQueue() {
+        val flowUrl = _state.value.config.flowUrl
+        if (flowUrl.isBlank()) { _state.update { it.copy(message = "Kein Upload-Link eingestellt.") }; return }
+        viewModelScope.launch {
+            val files = queue.files()
+            var sent = 0
+            for (f in files) {
+                val ok = uploader.upload(flowUrl, f.name, f.readBytes()).isSuccess
+                if (!ok) break
+                f.delete(); sent++
+            }
+            _state.update { it.copy(queueCount = queue.count(), message = "$sent von ${files.size} Fotos gesendet.") }
+        }
+    }
+
+    fun clearQueue() {
+        queue.clear()
+        refreshQueue()
+    }
+
+    /** Testdruck mit Platzhalterfoto und Banner, um Drucker und Layout zu pruefen. */
+    fun testPrint() {
+        _state.update { it.copy(printerTest = "Testdruck wird gesendet …") }
+        viewModelScope.launch {
+            val jpeg = withContext(Dispatchers.Default) {
+                val bmp = PhotoComposer.preview(getApplication(), _state.value.config.bannerText.ifBlank { "Testdruck" })
+                ByteArrayOutputStream().also { bmp.compress(Bitmap.CompressFormat.JPEG, 92, it) }.toByteArray()
+            }
+            val result = printer.printJpeg(_state.value.config, jpeg, landscape = true, copies = 1)
+            _state.update { it.copy(printerTest = result.fold({ it }, { e -> e.message ?: "Testdruck fehlgeschlagen" })) }
         }
     }
 

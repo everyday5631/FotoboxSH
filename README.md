@@ -5,13 +5,22 @@ Navy-Banner mit «SONNHALDE»-Wortmarke, Gold-Linien, Cream-Hintergrund.
 
 ## Modi (wie UpReach)
 
-- **Setup-Modus:** Übersicht mit Status (WCMPlus, Upload, Banner, Timer) und grossem **START**. Dort *Einstellungen*:
-  Banner-Text, Timer (3/5/10 s), Auto-Druck, Kamera, WCMPlus-/Drucker-/Upload-Adresse, PIN.
+- **Setup-Modus** (wie die UpReach-Oberfläche): Reiter **Konfiguration** (Banner-Text, Startbildschirm, Timer, Auto-Druck, PIN),
+  **Kamera** (Live-Bild, Front-/Rückkamera, Belichtung, Zoom), **Drucker** (WCMPlus-/IPP-Adresse, Testdruck),
+  **Warteschlange** (nicht hochgeladene Fotos erneut senden), **WLAN**; unten grosser **Start**-Knopf, oben ⏻ = App beenden (PIN).
 - **Retail-Modus** (nach START, Kiosk/Vollbild): **Startbildschirm** (Hintergrundbild, Logo, Überschrift, «jetzt starten»;
   Bild/Texte im Setup einstellbar) → Live-Kamera → «Foto aufnehmen» → Timer → Foto → Ergebnis mit
   **ZUM HERUNTERLADEN SCANNEN** (QR-Code), Anzahl Abzüge (1–3), **DRUCKEN**, **FERTIG**. Nach 90 s ohne Eingabe
   zurück zum Start. Beenden: langer Druck auf das Logo (Startbildschirm) bzw. den Banner, dann PIN. Nach einem Neustart der App geht es direkt im
   Retail-Modus weiter.
+
+## SharePoint-Flow
+
+Anleitung und Testskript: [docs/power-automate-flow.md](docs/power-automate-flow.md), `tools/test-flow.sh`.
+
+## Standard-Hintergrund Startbildschirm
+
+Datei `app/src/main/res/drawable-nodpi/start_background.jpg` ablegen (wird automatisch genutzt); im Setup gewählte Bilder haben Vorrang.
 
 ## Foto-Banner
 

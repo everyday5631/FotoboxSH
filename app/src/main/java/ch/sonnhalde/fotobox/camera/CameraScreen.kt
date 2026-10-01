@@ -65,7 +65,7 @@ import java.io.File
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-private suspend fun cameraProvider(context: android.content.Context): ProcessCameraProvider =
+internal suspend fun cameraProvider(context: android.content.Context): ProcessCameraProvider =
     suspendCancellableCoroutine { cont ->
         val future = ProcessCameraProvider.getInstance(context)
         future.addListener(
@@ -82,6 +82,8 @@ private suspend fun cameraProvider(context: android.content.Context): ProcessCam
 fun CameraScreen(
     useFront: Boolean,
     timerSeconds: Int,
+    exposureIndex: Int,
+    zoomRatio: Float,
     bannerText: String,
     message: String?,
     onCaptured: (File) -> Unit,
@@ -112,12 +114,17 @@ fun CameraScreen(
             val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
             p.unbindAll()
             val selector = if (useFront) CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
-            try {
+            val camera = try {
                 p.bindToLifecycle(lifecycleOwner, selector, preview, imageCapture)
             } catch (e: IllegalArgumentException) {
                 // Gewuenschte Kamera fehlt (z. B. Tablet ohne Frontkamera): andere Kamera versuchen.
                 val other = if (useFront) CameraSelector.DEFAULT_BACK_CAMERA else CameraSelector.DEFAULT_FRONT_CAMERA
                 p.bindToLifecycle(lifecycleOwner, other, preview, imageCapture)
+            }
+            // Einstellungen aus dem Setup (Reiter «Kamera») anwenden.
+            runCatching {
+                if (camera.cameraInfo.exposureState.isExposureCompensationSupported) camera.cameraControl.setExposureCompensationIndex(exposureIndex)
+                camera.cameraControl.setZoomRatio(zoomRatio)
             }
         } catch (e: Exception) {
             onFailure("Kamera konnte nicht gestartet werden: ${e.message}")

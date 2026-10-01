@@ -22,6 +22,9 @@ data class WcmConfig(
     /** Countdown vor der Aufnahme in Sekunden. */
     val timerSeconds: Int = 3,
     /** Ueberschrift und Knopf-Text auf dem Startbildschirm des Retail-Modus. */
+    /** Kamera: Belichtungskorrektur (Index) und Zoom, wie bei UpReach «Camera settings». */
+    val exposureIndex: Int = 0,
+    val zoomRatio: Float = 1f,
     val startTitle: String = "Ein Moment für Sie und Ihre Liebsten",
     val startButton: String = "jetzt starten",
 ) {
@@ -44,6 +47,8 @@ class WcmSettings(context: Context) {
         useFrontCamera = prefs.getBoolean("useFrontCamera", true),
         bannerText = prefs.getString("bannerText", "").orEmpty(),
         timerSeconds = prefs.getInt("timerSeconds", 3),
+        exposureIndex = prefs.getInt("exposureIndex", 0),
+        zoomRatio = prefs.getFloat("zoomRatio", 1f),
         startTitle = prefs.getString("startTitle", WcmConfig().startTitle).orEmpty(),
         startButton = prefs.getString("startButton", WcmConfig().startButton).orEmpty(),
     )
@@ -59,6 +64,8 @@ class WcmSettings(context: Context) {
             .putBoolean("useFrontCamera", config.useFrontCamera)
             .putString("bannerText", config.bannerText.take(28))
             .putInt("timerSeconds", config.timerSeconds)
+            .putInt("exposureIndex", config.exposureIndex)
+            .putFloat("zoomRatio", config.zoomRatio)
             .putString("startTitle", config.startTitle.take(60))
             .putString("startButton", config.startButton.take(24))
             .apply()

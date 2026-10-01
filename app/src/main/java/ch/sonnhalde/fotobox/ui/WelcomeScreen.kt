@@ -51,9 +51,16 @@ import java.io.File
  */
 @Composable
 fun WelcomeScreen(state: UiState, bgFile: File, onStart: () -> Unit, onAdmin: () -> Unit) {
+    val context = LocalContext.current
     val background: ImageBitmap? by produceState<ImageBitmap?>(null, state.bgVersion) {
         value = withContext(Dispatchers.IO) {
-            if (bgFile.exists()) BitmapFactory.decodeFile(bgFile.path)?.asImageBitmap() else null
+            if (bgFile.exists()) {
+                BitmapFactory.decodeFile(bgFile.path)?.asImageBitmap()
+            } else {
+                // Standardbild: app/src/main/res/drawable-nodpi/start_background.jpg (falls vorhanden)
+                val id = context.resources.getIdentifier("start_background", "drawable", context.packageName)
+                if (id != 0) BitmapFactory.decodeResource(context.resources, id)?.asImageBitmap() else null
+            }
         }
     }
 
