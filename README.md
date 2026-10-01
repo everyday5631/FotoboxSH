@@ -15,8 +15,8 @@ Navy-Banner mit «SONNHALDE»-Wortmarke, Gold-Linien, Cream-Hintergrund.
 ## Foto-Banner
 
 Das Druckbild ist 3:2 (10 x 15 cm) mit hellem Banner unten: Sonnhalde-Logo mittig, frei wählbarer Text rechts
-(max. 28 Zeichen, z. B. «Personalfest 2027»; Schrift passt sich an). Das Logo ist eine Nachbildung; für das Original
-die Datei `app/src/main/res/drawable-nodpi/sonnhalde_logo.png` ablegen, sie wird automatisch verwendet.
+(max. 28 Zeichen, z. B. «Personalfest 2027»; Schrift passt sich an). Das Original-Logo liegt unter
+`app/src/main/res/drawable-nodpi/sonnhalde_logo.png` (Austausch der Datei genügt).
 
 ## Ablauf (technisch)
 
