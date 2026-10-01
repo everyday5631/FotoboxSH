@@ -26,7 +26,7 @@ import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
 
-enum class Screen { Home, Camera, Result }
+enum class Screen { Splash, Start, Result, Admin }
 
 sealed interface UploadState {
     data object Idle : UploadState
@@ -45,7 +45,7 @@ sealed interface PrintState {
 data class UiState(
     val config: WcmConfig = WcmConfig(),
     val status: WcmStatus = WcmStatus.Unknown,
-    val screen: Screen = Screen.Home,
+    val screen: Screen = Screen.Splash,
     val photo: Bitmap? = null,
     val upload: UploadState = UploadState.Idle,
     val print: PrintState = PrintState.Idle,
@@ -87,16 +87,23 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- Foto-Ablauf: Kamera -> Ergebnis (Upload, QR, Druck) ----
 
-    fun openCamera() = _state.update { it.copy(screen = Screen.Camera, message = null) }
+    fun finishSplash() = _state.update { if (it.screen == Screen.Splash) it.copy(screen = Screen.Start) else it }
 
     fun backToHome() {
         photoJpeg = null
         _state.update {
-            it.copy(screen = Screen.Home, photo = null, upload = UploadState.Idle, print = PrintState.Idle, qrBitmap = null, savedUri = null, message = null)
+            it.copy(screen = Screen.Start, photo = null, upload = UploadState.Idle, print = PrintState.Idle, qrBitmap = null, savedUri = null, message = null)
         }
     }
 
-    fun showError(text: String) = _state.update { it.copy(screen = Screen.Home, message = text) }
+    fun showError(text: String) {
+        _state.update { it.copy(screen = Screen.Start, message = text) }
+        // Meldung nach einigen Sekunden ausblenden, damit der Startbildschirm sauber bleibt.
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(8000)
+            _state.update { if (it.message == text) it.copy(message = null) else it }
+        }
+    }
 
     fun onPhotoCaptured(file: File) {
         viewModelScope.launch {
@@ -116,6 +123,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                         it.copy(screen = Screen.Result, photo = bmp, upload = UploadState.Idle, print = PrintState.Idle, qrBitmap = null, savedUri = null, message = null)
                     }
                     uploadPhoto()
+                    if (_state.value.config.autoPrint) printPhoto()
                 },
                 onFailure = { e -> showError("Foto konnte nicht verarbeitet werden: ${e.message}") },
             )
@@ -177,11 +185,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun unlockAdmin(pin: String): Boolean {
         val ok = pin == Kiosk.pin(getApplication())
-        if (ok) _state.update { it.copy(adminUnlocked = true) }
+        if (ok) _state.update { it.copy(adminUnlocked = true, screen = Screen.Admin, message = null) }
         return ok
     }
 
-    fun lockAdmin() = _state.update { it.copy(adminUnlocked = false, printerTest = null) }
+    fun lockAdmin() = _state.update { it.copy(adminUnlocked = false, screen = Screen.Start, printerTest = null, message = null) }
 
     fun setPin(pin: String) {
         if (pin.length >= 4) Kiosk.setPin(getApplication(), pin)
@@ -214,7 +222,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Wird aufgerufen, wenn ein Link per "Teilen" (z. B. aus SharePoint) uebergeben wird. */
     fun receiveSharedText(text: String) {
-        _state.update { it.copy(screen = Screen.Home) }
         setQrInput(text.trim())
         generateQr()
     }

@@ -13,6 +13,10 @@ data class WcmConfig(
     val flowUrl: String = "",
     /** Optionale IPP-Adresse des Druckers (z. B. ipp://192.168.4.1:631/ipp/print); leer = automatisch suchen. */
     val printerUri: String = "",
+    /** Foto nach der Aufnahme sofort drucken (ohne Tippen auf «Drucken»). */
+    val autoPrint: Boolean = false,
+    /** Frontkamera (Selfie) statt Rueckkamera verwenden. */
+    val useFrontCamera: Boolean = true,
 ) {
     companion object {
         /** Standardadresse des WCMPlus-Portals (laut Anleitung 192.168.4.1). */
@@ -29,6 +33,8 @@ class WcmSettings(context: Context) {
         token = prefs.getString("token", "").orEmpty(),
         flowUrl = prefs.getString("flowUrl", "").orEmpty(),
         printerUri = prefs.getString("printerUri", "").orEmpty(),
+        autoPrint = prefs.getBoolean("autoPrint", false),
+        useFrontCamera = prefs.getBoolean("useFrontCamera", true),
     )
 
     fun save(config: WcmConfig) {
@@ -38,6 +44,8 @@ class WcmSettings(context: Context) {
             .putString("token", config.token.trim())
             .putString("flowUrl", config.flowUrl.trim())
             .putString("printerUri", config.printerUri.trim())
+            .putBoolean("autoPrint", config.autoPrint)
+            .putBoolean("useFrontCamera", config.useFrontCamera)
             .apply()
     }
 }

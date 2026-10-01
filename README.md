@@ -3,7 +3,13 @@
 Android-App (Kotlin, Jetpack Compose) im [Sonnhalde-Design-System](https://github.com/everyday5631/Se-Design):
 Navy-Banner mit «SONNHALDE»-Wortmarke, Gold-Linien, Cream-Hintergrund.
 
-## Ablauf
+## Ablauf (Kundensicht)
+
+Startbild (Sonne + «SONNHALDE») → **Startbildschirm** mit Live-Kamera: ein Tipp irgendwo startet den Countdown →
+Foto → **Ergebnis**: QR-Code zum Herunterladen, «Drucken», «Fertig». Nach 90 Sekunden ohne Eingabe geht es automatisch
+zurück zum Start. In der Verwaltung lässt sich «automatisch drucken» einschalten; dann entfällt auch der Druck-Tipp.
+
+## Ablauf (technisch)
 
 1. **Foto aufnehmen** – 3-2-1-Countdown, Front- oder Rückkamera.
 2. **Upload nach SharePoint** – automatisch über einen Power-Automate-Flow (siehe unten).

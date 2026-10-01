@@ -25,6 +25,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -47,10 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ch.sonnhalde.fotobox.Screen
 import ch.sonnhalde.fotobox.UiState
-import ch.sonnhalde.fotobox.PrintState
-import ch.sonnhalde.fotobox.UploadState
 import ch.sonnhalde.fotobox.camera.CameraScreen
-import ch.sonnhalde.fotobox.print.PhotoPrinter
 import java.io.File
 import ch.sonnhalde.fotobox.wcm.WcmConfig
 import ch.sonnhalde.fotobox.wcm.WcmStatus
@@ -61,7 +59,7 @@ class Actions(
     val onQrInput: (String) -> Unit,
     val onGenerate: () -> Unit,
     val onDownload: () -> Unit,
-    val onOpenCamera: () -> Unit,
+    val onSplashDone: () -> Unit,
     val onPhotoCaptured: (File) -> Unit,
     val onCameraError: (String) -> Unit,
     val onRetryUpload: () -> Unit,
@@ -76,28 +74,30 @@ class Actions(
 
 @Composable
 fun MainScreen(state: UiState, actions: Actions) {
-    if (state.screen == Screen.Camera) {
-        CameraScreen(onCaptured = actions.onPhotoCaptured, onCancel = actions.onHome, onFailure = actions.onCameraError)
-        return
-    }
     var askPin by remember { mutableStateOf(false) }
     if (askPin) {
         PinDialog(onDismiss = { askPin = false }, onSubmit = { actions.onUnlockAdmin(it).also { ok -> if (ok) askPin = false } })
     }
-    Column(Modifier.fillMaxSize().background(Sonn.Cream)) {
-        // Langer Druck auf den Banner oeffnet den Verwaltungsbereich (PIN).
-        SonnhaldeBanner(title = "Fotobox", onLongPress = { askPin = true })
-        Column(
-            Modifier.weight(1f).verticalScroll(rememberScrollState()).navigationBarsPadding()
-                .padding(horizontal = 24.dp, vertical = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
-        ) {
-            if (state.screen == Screen.Result) {
-                ResultSection(state, actions)
-            } else {
+    when (state.screen) {
+        Screen.Splash -> SplashScreen(onDone = actions.onSplashDone)
+        // Langer Druck auf den Banner oeffnet die Verwaltung (PIN).
+        Screen.Start -> CameraScreen(
+            useFront = state.config.useFrontCamera,
+            message = state.message,
+            onCaptured = actions.onPhotoCaptured,
+            onFailure = actions.onCameraError,
+            onAdmin = { askPin = true },
+        )
+        Screen.Result -> ResultScreen(state, actions)
+        Screen.Admin -> Column(Modifier.fillMaxSize().background(Sonn.Cream)) {
+            SonnhaldeBanner(title = "Verwaltung")
+            Column(
+                Modifier.weight(1f).verticalScroll(rememberScrollState()).navigationBarsPadding()
+                    .padding(horizontal = 24.dp, vertical = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp),
+            ) {
                 state.message?.let { Notice(it) }
-                SonnButton("Foto aufnehmen", primary = true, onClick = actions.onOpenCamera)
-                if (state.adminUnlocked) AdminSection(state, actions)
+                AdminSection(state, actions)
             }
         }
     }
@@ -130,6 +130,8 @@ private fun PinDialog(onDismiss: () -> Unit, onSubmit: (String) -> Boolean) {
 private fun AdminSection(state: UiState, actions: Actions) {
     var newPin by remember { mutableStateOf("") }
     SectionTitle("Verwaltung", "Einstellungen")
+    SettingSwitch("Foto automatisch drucken", state.config.autoPrint) { actions.onConfigChange(state.config.copy(autoPrint = it)) }
+    SettingSwitch("Frontkamera verwenden", state.config.useFrontCamera) { actions.onConfigChange(state.config.copy(useFrontCamera = it)) }
     ConnectionSection(state, actions.onConfigChange, actions.onCheckConnection, actions.onTestPrinter)
     QrSection(state, actions.onQrInput, actions.onGenerate, actions.onDownload)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -139,45 +141,6 @@ private fun AdminSection(state: UiState, actions: Actions) {
         SonnButton(if (state.kioskOn) "Kiosk beenden" else "Kiosk starten", primary = false, onClick = actions.onExitKiosk)
         SonnButton("Verwaltung schliessen", primary = true, onClick = actions.onLockAdmin)
     }
-}
-
-@Composable
-private fun ResultSection(state: UiState, actions: Actions) {
-    val context = LocalContext.current
-    SectionTitle("Fertig", "Ihr Foto")
-    state.photo?.let { photo ->
-        Image(photo.asImageBitmap(), contentDescription = "Foto", modifier = Modifier.fillMaxWidth().border(1.dp, Sonn.Line, MaterialShape))
-        SonnButton("Drucken", primary = true, onClick = actions.onPrint)
-        when (val pr = state.print) {
-            PrintState.Idle -> Unit
-            PrintState.Printing -> Text("Foto wird gedruckt …", color = Sonn.Stone)
-            is PrintState.Done -> Text(pr.text, color = Sonn.Ok, fontWeight = FontWeight.Bold)
-            is PrintState.Failed -> {
-                Notice(pr.reason)
-                // Ausweg: normaler Android-Druckdialog (Drucker «QW410», Papierformat «4 x 6 in.»).
-                SonnButton("Über Android-Druckdialog drucken", primary = false, onClick = { PhotoPrinter.print(context, photo) })
-            }
-        }
-    }
-    when (val u = state.upload) {
-        UploadState.Idle -> Unit
-        UploadState.Uploading -> Text("Foto wird nach SharePoint hochgeladen …", color = Sonn.Stone)
-        is UploadState.Failed -> {
-            Notice(u.reason)
-            SonnButton("Upload wiederholen", primary = false, onClick = actions.onRetryUpload)
-        }
-        is UploadState.Done -> {
-            SectionTitle("Download", "QR-Code zum Foto")
-            state.qrBitmap?.let { bmp ->
-                Box(Modifier.fillMaxWidth().border(1.dp, Sonn.Line, MaterialShape).background(Color.White).padding(16.dp), contentAlignment = Alignment.Center) {
-                    Image(bmp.asImageBitmap(), contentDescription = "QR-Code", modifier = Modifier.size(260.dp))
-                }
-                SonnButton("QR-Code herunterladen", primary = false, onClick = actions.onDownload)
-            }
-        }
-    }
-    state.message?.let { Notice(it) }
-    SonnButton("Neues Foto", primary = true, onClick = actions.onHome)
 }
 
 /** Ueberschrift mit Gold-Linie (GoldRule-Muster des Design-Systems). */
@@ -318,4 +281,12 @@ internal fun SonnField(label: String, value: String, keyboard: KeyboardType, sin
             unfocusedContainerColor = Sonn.Surface,
         ),
     )
+}
+
+@Composable
+private fun SettingSwitch(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, Modifier.weight(1f))
+        Switch(checked = checked, onCheckedChange = onChange)
+    }
 }

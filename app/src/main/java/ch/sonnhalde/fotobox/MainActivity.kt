@@ -29,7 +29,7 @@ class MainActivity : ComponentActivity() {
                         onQrInput = vm::setQrInput,
                         onGenerate = vm::generateQr,
                         onDownload = vm::downloadQr,
-                        onOpenCamera = vm::openCamera,
+                        onSplashDone = vm::finishSplash,
                         onPhotoCaptured = vm::onPhotoCaptured,
                         onCameraError = vm::showError,
                         onRetryUpload = vm::uploadPhoto,
