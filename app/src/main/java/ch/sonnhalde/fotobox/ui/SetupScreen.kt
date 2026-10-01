@@ -23,6 +23,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -161,8 +162,17 @@ private fun PrintFormatSection(state: UiState, actions: Actions) {
     val cfg = state.config
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SectionTitle("Drucker", "Druckformat")
-        SonnField("Papierformat (IPP-Name, leer = automatisch 4x6)", cfg.printMedia, KeyboardType.Text) { actions.onConfigQuiet(cfg.copy(printMedia = it)) }
-        Text("Verfügbare Namen zeigt «Drucker testen» unter «media-supported».", color = Sonn.Stone, fontSize = 12.sp)
+        // Papierformate beim Oeffnen vom Drucker laden und zum Antippen anbieten.
+        LaunchedEffect(Unit) { if (state.printerMedia.isEmpty()) actions.onTestPrinter() }
+        if (state.printerMedia.isNotEmpty()) {
+            ChoiceRow("Papierformat (vom Drucker)", listOf("Automatisch (4x6)" to "") + state.printerMedia.map { it to it }, cfg.printMedia) {
+                actions.onConfigQuiet(cfg.copy(printMedia = it))
+            }
+        } else {
+            Text("Papierformate werden vom Drucker geladen … (Drucker eingeschaltet und im selben WLAN?)", color = Sonn.Stone, fontSize = 13.sp)
+            SonnButton("Formate vom Drucker laden", primary = false, onClick = actions.onTestPrinter)
+        }
+        SonnField("Papierformat von Hand (IPP-Name, leer = oben gewählt)", cfg.printMedia, KeyboardType.Text) { actions.onConfigQuiet(cfg.copy(printMedia = it)) }
         ChoiceRow("Skalierung", listOf("Einpassen" to "fit", "Füllen (zuschneiden)" to "fill", "Drucker entscheidet" to "auto"), cfg.printScaling) {
             actions.onConfigQuiet(cfg.copy(printScaling = it))
         }

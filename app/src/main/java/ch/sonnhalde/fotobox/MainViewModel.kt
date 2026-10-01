@@ -63,6 +63,8 @@ data class UiState(
     /** Fotos, die noch nicht nach SharePoint hochgeladen werden konnten. */
     val queueCount: Int = 0,
     val printerTest: String? = null,
+    /** Vom Drucker gemeldete Papierformate (IPP media-supported), zum Auswaehlen im Setup. */
+    val printerMedia: List<String> = emptyList(),
     val qrInput: String = "",
     val qrBitmap: Bitmap? = null,
     val savedUri: Uri? = null,
@@ -264,6 +266,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(printerTest = "Suche Drucker …") }
         viewModelScope.launch {
             val result = printer.discover(_state.value.config)
+            result.getOrNull()?.let { f ->
+                _state.update { it.copy(printerMedia = f.info.attrs["media-supported"].orEmpty().distinct().take(40)) }
+            }
             val text = result.fold(
                 onSuccess = { f ->
                     "Gefunden: ${f.ippUri}\n" + listOf("printer-name", "printer-state", "printer-state-reasons", "document-format-supported", "media-supported")
