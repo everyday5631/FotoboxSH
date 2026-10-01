@@ -43,7 +43,7 @@ class IppPrinter(
         Result.failure(IllegalStateException("Drucker nicht gefunden:\n" + tried.joinToString("\n")))
     }
 
-    suspend fun printJpeg(config: WcmConfig, jpeg: ByteArray, landscape: Boolean): Result<String> {
+    suspend fun printJpeg(config: WcmConfig, jpeg: ByteArray, landscape: Boolean, copies: Int = 1): Result<String> {
         val printer = discover(config).getOrElse { return Result.failure(it) }
         val formats = printer.info.attrs["document-format-supported"].orEmpty()
         if (formats.isNotEmpty() && "image/jpeg" !in formats) {
@@ -52,9 +52,9 @@ class IppPrinter(
         val media = printer.info.attrs["media-supported"].orEmpty().firstOrNull { it.contains("4x6") }
         // Vom genauesten zum einfachsten Auftrag; manche Drucker lehnen einzelne Attribute ab.
         val attempts = listOf(
-            Ipp.JobOptions(media, scalingFill = true, landscape = landscape),
-            Ipp.JobOptions(media),
-            Ipp.JobOptions(),
+            Ipp.JobOptions(media, scalingFill = true, landscape = landscape, copies = copies),
+            Ipp.JobOptions(media, copies = copies),
+            Ipp.JobOptions(copies = copies),
         ).distinct()
         var lastError = "unbekannt"
         for (options in attempts) {
@@ -64,7 +64,7 @@ class IppPrinter(
                 }
             }
             val resp = result.getOrNull()
-            if (resp != null && resp.ok) return Result.success("Foto an den Drucker gesendet.")
+            if (resp != null && resp.ok) return Result.success(if (copies > 1) "$copies Abzüge an den Drucker gesendet." else "Foto an den Drucker gesendet.")
             lastError = resp?.statusText() ?: result.exceptionOrNull()?.message ?: lastError
         }
         return Result.failure(IllegalStateException("Drucker hat den Auftrag abgelehnt ($lastError)"))

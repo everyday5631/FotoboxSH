@@ -25,6 +25,7 @@ class MainActivity : ComponentActivity() {
                     state = state,
                     actions = Actions(
                         onConfigChange = vm::updateConfig,
+                        onConfigQuiet = vm::updateConfigQuiet,
                         onCheckConnection = vm::checkConnection,
                         onQrInput = vm::setQrInput,
                         onGenerate = vm::generateQr,
@@ -35,10 +36,12 @@ class MainActivity : ComponentActivity() {
                         onRetryUpload = vm::uploadPhoto,
                         onHome = vm::backToHome,
                         onPrint = vm::printPhoto,
+                        onCopies = vm::setCopies,
                         onTestPrinter = vm::testPrinter,
-                        onUnlockAdmin = vm::unlockAdmin,
-                        onLockAdmin = vm::lockAdmin,
-                        onExitKiosk = ::toggleKiosk,
+                        onStartRetail = ::startRetail,
+                        onExitRetail = ::exitRetail,
+                        onOpenSettings = vm::openSettings,
+                        onCloseSettings = vm::closeSettings,
                         onSetPin = vm::setPin,
                     ),
                 )
@@ -57,14 +60,18 @@ class MainActivity : ComponentActivity() {
         if (!Kiosk.isEnabled(this)) super.onBackPressed()
     }
 
-    private fun toggleKiosk() {
-        if (Kiosk.isEnabled(this)) {
-            Kiosk.exit(this)
-        } else {
-            Kiosk.setEnabled(this, true)
-            Kiosk.apply(this)
-        }
-        vm.kioskChanged(Kiosk.isEnabled(this))
+    private fun startRetail() {
+        Kiosk.setEnabled(this, true)
+        Kiosk.apply(this)
+        vm.startRetail()
+    }
+
+    /** PIN pruefen; bei Erfolg Kiosk loesen und zur Uebersicht (Setup-Modus). */
+    private fun exitRetail(pin: String): Boolean {
+        if (!vm.checkPin(pin)) return false
+        Kiosk.exit(this)
+        vm.exitRetail()
+        return true
     }
 
     override fun onNewIntent(intent: Intent) {

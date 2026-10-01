@@ -11,7 +11,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 
 /**
- * Kiosk-Modus wie bei UpReach: Lock-Task-Modus (App kann nicht verlassen werden), Vollbild, Bildschirm bleibt an.
+ * Kiosk-Modus (= Retail-Modus) wie bei UpReach: Lock-Task-Modus (App kann nicht verlassen werden), Vollbild, Bildschirm bleibt an.
  *
  * - Als **Device Owner** (einmalig per ADB gesetzt) startet der Lock-Task-Modus ohne Rueckfrage und ohne
  *   Ausstiegsgeste. Befehl: `adb shell dpm set-device-owner ch.sonnhalde.fotobox/.kiosk.AdminReceiver`
@@ -25,7 +25,7 @@ object Kiosk {
 
     private fun prefs(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    fun isEnabled(c: Context) = prefs(c).getBoolean(KEY_ENABLED, true)
+    fun isEnabled(c: Context) = prefs(c).getBoolean(KEY_ENABLED, false)
     fun setEnabled(c: Context, on: Boolean) = prefs(c).edit().putBoolean(KEY_ENABLED, on).apply()
     fun pin(c: Context): String = prefs(c).getString(KEY_PIN, DEFAULT_PIN) ?: DEFAULT_PIN
     fun setPin(c: Context, pin: String) = prefs(c).edit().putString(KEY_PIN, pin).apply()

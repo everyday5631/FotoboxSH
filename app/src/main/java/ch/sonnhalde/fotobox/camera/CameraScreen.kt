@@ -61,11 +61,12 @@ private suspend fun cameraProvider(context: android.content.Context): ProcessCam
 
 /**
  * Startbildschirm der Fotobox: Live-Kamerabild im Hintergrund, ein Tipp irgendwo startet
- * 3-2-1-Countdown und Foto. Langer Druck auf den Banner oeffnet die Verwaltung.
+ * Countdown und Foto. Langer Druck auf den Banner oeffnet die Verwaltung.
  */
 @Composable
 fun CameraScreen(
     useFront: Boolean,
+    timerSeconds: Int,
     message: String?,
     onCaptured: (File) -> Unit,
     onFailure: (String) -> Unit,
@@ -111,7 +112,7 @@ fun CameraScreen(
     fun shoot() {
         if (countdown != null || !hasPermission) return
         scope.launch {
-            for (i in 3 downTo 1) { countdown = i; delay(1000) }
+            for (i in timerSeconds downTo 1) { countdown = i; delay(1000) }
             countdown = null
             val file = File.createTempFile("foto", ".jpg", context.cacheDir)
             imageCapture.takePicture(
@@ -156,8 +157,8 @@ fun CameraScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    "Tippen zum Starten",
-                    color = Sonn.Navy, fontSize = 28.sp, fontWeight = FontWeight.Bold,
+                    "START",
+                    color = Sonn.Navy, fontSize = 36.sp, fontWeight = FontWeight.Bold, letterSpacing = 6.sp,
                     modifier = Modifier.clip(RoundedCornerShape(3.dp)).background(Sonn.LogoGold)
                         .padding(horizontal = 40.dp, vertical = 20.dp),
                 )

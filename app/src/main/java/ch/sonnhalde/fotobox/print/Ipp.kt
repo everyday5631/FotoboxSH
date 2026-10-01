@@ -25,6 +25,7 @@ object Ipp {
         val media: String? = null,
         val scalingFill: Boolean = false,
         val landscape: Boolean = false,
+        val copies: Int = 1,
     )
 
     fun getPrinterAttributes(ippUri: String): ByteArray {
@@ -44,7 +45,7 @@ object Ipp {
         w.str(0x42, "job-name", jobName)
         w.str(0x49, "document-format", mime)
         w.u8(0x02)
-        w.int(0x21, "copies", 1)
+        w.int(0x21, "copies", options.copies)
         options.media?.let { w.str(0x44, "media", it) }
         if (options.scalingFill) w.str(0x44, "print-scaling", "fill")
         if (options.landscape) w.int(0x23, "orientation-requested", 4)

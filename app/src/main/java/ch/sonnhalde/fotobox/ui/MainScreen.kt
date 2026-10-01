@@ -49,12 +49,16 @@ import androidx.compose.ui.unit.sp
 import ch.sonnhalde.fotobox.Screen
 import ch.sonnhalde.fotobox.UiState
 import ch.sonnhalde.fotobox.camera.CameraScreen
+import ch.sonnhalde.fotobox.photo.PhotoComposer
+import ch.sonnhalde.fotobox.MAX_COPIES
 import java.io.File
 import ch.sonnhalde.fotobox.wcm.WcmConfig
 import ch.sonnhalde.fotobox.wcm.WcmStatus
 
 class Actions(
     val onConfigChange: (WcmConfig) -> Unit,
+    /** Speichert Einstellungen ohne erneuten Verbindungstest (Schalter, Banner-Text, Timer). */
+    val onConfigQuiet: (WcmConfig) -> Unit,
     val onCheckConnection: () -> Unit,
     val onQrInput: (String) -> Unit,
     val onGenerate: () -> Unit,
@@ -65,10 +69,13 @@ class Actions(
     val onRetryUpload: () -> Unit,
     val onHome: () -> Unit,
     val onPrint: () -> Unit,
+    val onCopies: (Int) -> Unit,
     val onTestPrinter: () -> Unit,
-    val onUnlockAdmin: (String) -> Boolean,
-    val onLockAdmin: () -> Unit,
-    val onExitKiosk: () -> Unit,
+    val onStartRetail: () -> Unit,
+    /** PIN pruefen und bei Erfolg den Retail-Modus verlassen. */
+    val onExitRetail: (String) -> Boolean,
+    val onOpenSettings: () -> Unit,
+    val onCloseSettings: () -> Unit,
     val onSetPin: (String) -> Unit,
 )
 
@@ -76,30 +83,22 @@ class Actions(
 fun MainScreen(state: UiState, actions: Actions) {
     var askPin by remember { mutableStateOf(false) }
     if (askPin) {
-        PinDialog(onDismiss = { askPin = false }, onSubmit = { actions.onUnlockAdmin(it).also { ok -> if (ok) askPin = false } })
+        PinDialog(onDismiss = { askPin = false }, onSubmit = { actions.onExitRetail(it).also { ok -> if (ok) askPin = false } })
     }
     when (state.screen) {
         Screen.Splash -> SplashScreen(onDone = actions.onSplashDone)
-        // Langer Druck auf den Banner oeffnet die Verwaltung (PIN).
+        Screen.Overview -> OverviewScreen(state, actions)
+        Screen.Settings -> SettingsScreen(state, actions)
+        // Retail-Modus: langer Druck auf den Banner + PIN fuehrt zurueck ins Setup.
         Screen.Start -> CameraScreen(
             useFront = state.config.useFrontCamera,
+            timerSeconds = state.config.timerSeconds,
             message = state.message,
             onCaptured = actions.onPhotoCaptured,
             onFailure = actions.onCameraError,
             onAdmin = { askPin = true },
         )
-        Screen.Result -> ResultScreen(state, actions)
-        Screen.Admin -> Column(Modifier.fillMaxSize().background(Sonn.Cream)) {
-            SonnhaldeBanner(title = "Verwaltung")
-            Column(
-                Modifier.weight(1f).verticalScroll(rememberScrollState()).navigationBarsPadding()
-                    .padding(horizontal = 24.dp, vertical = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp),
-            ) {
-                state.message?.let { Notice(it) }
-                AdminSection(state, actions)
-            }
-        }
+        Screen.Result -> ResultScreen(state, actions, onAdmin = { askPin = true })
     }
 }
 
@@ -109,7 +108,7 @@ private fun PinDialog(onDismiss: () -> Unit, onSubmit: (String) -> Boolean) {
     var wrong by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Verwaltung") },
+        title = { Text("Retail-Modus beenden") },
         text = {
             OutlinedTextField(
                 value = pin,
@@ -126,20 +125,109 @@ private fun PinDialog(onDismiss: () -> Unit, onSubmit: (String) -> Boolean) {
     )
 }
 
+/** Uebersicht im Setup-Modus (wie UpReach): Status und grosser START-Knopf fuer den Retail-Modus. */
 @Composable
-private fun AdminSection(state: UiState, actions: Actions) {
+private fun OverviewScreen(state: UiState, actions: Actions) {
+    Column(Modifier.fillMaxSize().background(Sonn.Cream)) {
+        SonnhaldeBanner(title = "Fotobox")
+        Column(
+            Modifier.weight(1f).verticalScroll(rememberScrollState()).navigationBarsPadding().padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            SectionTitle("Setup-Modus", "Bereit?")
+            val (dot, wcm) = when (val s = state.status) {
+                WcmStatus.Unknown -> Sonn.Stone to "WCMPlus: noch nicht geprüft"
+                WcmStatus.Checking -> Sonn.Stone to "WCMPlus: wird geprüft …"
+                is WcmStatus.Online -> Sonn.Ok to "WCMPlus: verbunden"
+                is WcmStatus.Offline -> Sonn.Error to "WCMPlus: nicht erreichbar"
+            }
+            StatusLine(dot, wcm)
+            StatusLine(if (state.config.flowUrl.isBlank()) Sonn.Error else Sonn.Ok,
+                if (state.config.flowUrl.isBlank()) "SharePoint-Upload: nicht eingerichtet" else "SharePoint-Upload: eingerichtet")
+            StatusLine(Sonn.Ok, "Banner: " + state.config.bannerText.ifBlank { "(kein Text)" })
+            StatusLine(Sonn.Ok, "Timer: ${state.config.timerSeconds} s · Auto-Druck: " + if (state.config.autoPrint) "ein" else "aus")
+
+            Button(
+                onClick = actions.onStartRetail,
+                shape = MaterialShape,
+                colors = ButtonDefaults.buttonColors(containerColor = Sonn.HeadingGold, contentColor = Sonn.Navy),
+                modifier = Modifier.fillMaxWidth().height(88.dp),
+            ) { Text("START", fontSize = 32.sp, fontWeight = FontWeight.Bold, letterSpacing = 4.sp) }
+            Text(
+                "START sperrt das Gerät im Retail-Modus. Beenden: langer Druck auf den Banner, dann PIN.",
+                color = Sonn.Stone, fontSize = 13.sp,
+            )
+            SonnButton("Einstellungen", primary = false, onClick = actions.onOpenSettings)
+        }
+    }
+}
+
+@Composable
+private fun StatusLine(color: Color, text: String) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Box(Modifier.size(12.dp).clip(CircleShape).background(color))
+        Text(text)
+    }
+}
+
+/** Setup: Banner-Text, Timer, Druck/Upload/WCMPlus, PIN. */
+@Composable
+private fun SettingsScreen(state: UiState, actions: Actions) {
+    val context = LocalContext.current
     var newPin by remember { mutableStateOf("") }
-    SectionTitle("Verwaltung", "Einstellungen")
-    SettingSwitch("Foto automatisch drucken", state.config.autoPrint) { actions.onConfigChange(state.config.copy(autoPrint = it)) }
-    SettingSwitch("Frontkamera verwenden", state.config.useFrontCamera) { actions.onConfigChange(state.config.copy(useFrontCamera = it)) }
-    ConnectionSection(state, actions.onConfigChange, actions.onCheckConnection, actions.onTestPrinter)
-    QrSection(state, actions.onQrInput, actions.onGenerate, actions.onDownload)
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionTitle("Kiosk", if (state.kioskOn) "Kiosk-Modus aktiv" else "Kiosk-Modus aus")
-        SonnField("Neue PIN (mind. 4 Zeichen)", newPin, KeyboardType.NumberPassword) { newPin = it }
-        SonnButton("PIN speichern", primary = false, onClick = { actions.onSetPin(newPin); newPin = "" })
-        SonnButton(if (state.kioskOn) "Kiosk beenden" else "Kiosk starten", primary = false, onClick = actions.onExitKiosk)
-        SonnButton("Verwaltung schliessen", primary = true, onClick = actions.onLockAdmin)
+    val cfg = state.config
+    Column(Modifier.fillMaxSize().background(Sonn.Cream)) {
+        SonnhaldeBanner(title = "Einstellungen")
+        Column(
+            Modifier.weight(1f).verticalScroll(rememberScrollState()).navigationBarsPadding()
+                .padding(horizontal = 24.dp, vertical = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+        ) {
+            state.message?.let { Notice(it) }
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SectionTitle("Foto", "Banner unten")
+                SonnField("Text im Banner rechts (z. B. Personalfest 2027)", cfg.bannerText, KeyboardType.Text) {
+                    actions.onConfigQuiet(cfg.copy(bannerText = it.take(PhotoComposer.MAX_TEXT)))
+                }
+                Text("${cfg.bannerText.length}/${PhotoComposer.MAX_TEXT} Zeichen", color = Sonn.Stone, fontSize = 12.sp)
+                val preview = remember(cfg.bannerText) { PhotoComposer.preview(context, cfg.bannerText) }
+                Image(preview.asImageBitmap(), contentDescription = "Vorschau", modifier = Modifier.fillMaxWidth().border(1.dp, Sonn.Line, MaterialShape))
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SectionTitle("Ablauf", "Timer und Druck")
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Timer vor dem Foto", Modifier.weight(1f))
+                    for (sec in listOf(3, 5, 10)) {
+                        SonnButton("$sec s", primary = cfg.timerSeconds == sec, onClick = { actions.onConfigQuiet(cfg.copy(timerSeconds = sec)) })
+                        Spacer(Modifier.size(6.dp))
+                    }
+                }
+                SettingSwitch("Foto automatisch drucken (1 Abzug)", cfg.autoPrint) { actions.onConfigQuiet(cfg.copy(autoPrint = it)) }
+                SettingSwitch("Frontkamera verwenden", cfg.useFrontCamera) { actions.onConfigQuiet(cfg.copy(useFrontCamera = it)) }
+                Text("Kunden können bis zu $MAX_COPIES Abzüge drucken.", color = Sonn.Stone, fontSize = 13.sp)
+            }
+
+            ConnectionSection(state, actions.onConfigChange, actions.onCheckConnection, actions.onTestPrinter)
+            QrSection(state, actions.onQrInput, actions.onGenerate, actions.onDownload)
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SectionTitle("Sicherheit", "PIN für Retail-Modus")
+                SonnField("Neue PIN (mind. 4 Zeichen)", newPin, KeyboardType.NumberPassword) { newPin = it }
+                SonnButton("PIN speichern", primary = false, onClick = { actions.onSetPin(newPin); newPin = "" })
+            }
+            SonnButton("Zurück zur Übersicht", primary = true, onClick = actions.onCloseSettings)
+        }
+    }
+}
+
+@Composable
+private fun SettingSwitch(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, Modifier.weight(1f))
+        Switch(checked = checked, onCheckedChange = onChange)
     }
 }
 
@@ -283,10 +371,3 @@ internal fun SonnField(label: String, value: String, keyboard: KeyboardType, sin
     )
 }
 
-@Composable
-private fun SettingSwitch(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, Modifier.weight(1f))
-        Switch(checked = checked, onCheckedChange = onChange)
-    }
-}

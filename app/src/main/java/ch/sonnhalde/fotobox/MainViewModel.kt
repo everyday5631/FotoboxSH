@@ -9,6 +9,7 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import ch.sonnhalde.fotobox.kiosk.Kiosk
+import ch.sonnhalde.fotobox.photo.PhotoComposer
 import ch.sonnhalde.fotobox.print.IppPrinter
 import ch.sonnhalde.fotobox.qr.QrCode
 import ch.sonnhalde.fotobox.upload.SharePointUploader
@@ -26,7 +27,8 @@ import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
 
-enum class Screen { Splash, Start, Result, Admin }
+/** Splash -> Overview (Setup) <-> Settings; Start/Result gehoeren zum Retail-Modus (Kiosk). */
+enum class Screen { Splash, Overview, Settings, Start, Result }
 
 sealed interface UploadState {
     data object Idle : UploadState
@@ -49,15 +51,17 @@ data class UiState(
     val photo: Bitmap? = null,
     val upload: UploadState = UploadState.Idle,
     val print: PrintState = PrintState.Idle,
-    /** Verwaltungsbereich (Einstellungen, QR aus Link, Kiosk beenden) nach PIN-Eingabe sichtbar. */
-    val adminUnlocked: Boolean = false,
-    val kioskOn: Boolean = true,
+    /** Retail-Modus aktiv: Kiosk fuer Gaeste (Foto, Timer, Drucken, QR). Sonst Setup-Modus. */
+    val retail: Boolean = false,
+    val copies: Int = 1,
     val printerTest: String? = null,
     val qrInput: String = "",
     val qrBitmap: Bitmap? = null,
     val savedUri: Uri? = null,
     val message: String? = null,
 )
+
+const val MAX_COPIES = 3
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val settings = WcmSettings(app)
@@ -66,7 +70,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val printer = IppPrinter()
     private var photoJpeg: ByteArray? = null
 
-    private val _state = MutableStateFlow(UiState(config = settings.load(), kioskOn = Kiosk.isEnabled(app)))
+    private val _state = MutableStateFlow(UiState(config = settings.load(), retail = Kiosk.isEnabled(app)))
     val state: StateFlow<UiState> = _state.asStateFlow()
 
     init { checkConnection() }
@@ -75,6 +79,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         settings.save(config)
         _state.update { it.copy(config = config) }
         checkConnection()
+    }
+
+    /** Speichert Einstellungen ohne Verbindungstest (z. B. Banner-Text beim Tippen). */
+    fun updateConfigQuiet(config: WcmConfig) {
+        settings.save(config)
+        _state.update { it.copy(config = config) }
     }
 
     fun checkConnection() {
@@ -87,12 +97,28 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- Foto-Ablauf: Kamera -> Ergebnis (Upload, QR, Druck) ----
 
-    fun finishSplash() = _state.update { if (it.screen == Screen.Splash) it.copy(screen = Screen.Start) else it }
+    fun finishSplash() = _state.update {
+        if (it.screen != Screen.Splash) it else it.copy(screen = if (it.retail) Screen.Start else Screen.Overview)
+    }
+
+    fun startRetail() = _state.update { it.copy(retail = true, screen = Screen.Start, message = null) }
+
+    fun exitRetail() {
+        photoJpeg = null
+        _state.update { it.copy(retail = false, screen = Screen.Overview, photo = null, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, message = null) }
+    }
+
+    fun openSettings() = _state.update { it.copy(screen = Screen.Settings, message = null) }
+    fun closeSettings() = _state.update { it.copy(screen = Screen.Overview, printerTest = null, message = null) }
+
+    fun checkPin(pin: String) = pin == Kiosk.pin(getApplication())
+
+    fun setCopies(n: Int) = _state.update { it.copy(copies = n.coerceIn(1, MAX_COPIES)) }
 
     fun backToHome() {
         photoJpeg = null
         _state.update {
-            it.copy(screen = Screen.Start, photo = null, upload = UploadState.Idle, print = PrintState.Idle, qrBitmap = null, savedUri = null, message = null)
+            it.copy(screen = Screen.Start, photo = null, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, savedUri = null, message = null)
         }
     }
 
@@ -109,9 +135,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val prepared = withContext(Dispatchers.Default) {
                 runCatching {
-                    val bmp = decodeUpright(file)
+                    val bmp = PhotoComposer.compose(getApplication(), decodeUpright(file), _state.value.config.bannerText)
                     val out = ByteArrayOutputStream()
-                    bmp.compress(Bitmap.CompressFormat.JPEG, 90, out)
+                    bmp.compress(Bitmap.CompressFormat.JPEG, 92, out)
                     bmp to out.toByteArray()
                 }
             }
@@ -120,7 +146,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 onSuccess = { (bmp, jpeg) ->
                     photoJpeg = jpeg
                     _state.update {
-                        it.copy(screen = Screen.Result, photo = bmp, upload = UploadState.Idle, print = PrintState.Idle, qrBitmap = null, savedUri = null, message = null)
+                        it.copy(screen = Screen.Result, photo = bmp, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, savedUri = null, message = null)
                     }
                     uploadPhoto()
                     if (_state.value.config.autoPrint) printPhoto()
@@ -156,7 +182,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val landscape = (_state.value.photo?.let { it.width >= it.height }) ?: true
         _state.update { it.copy(print = PrintState.Printing) }
         viewModelScope.launch {
-            val result = printer.printJpeg(_state.value.config, jpeg, landscape)
+            val result = printer.printJpeg(_state.value.config, jpeg, landscape, _state.value.copies)
             _state.update {
                 it.copy(print = result.fold(
                     onSuccess = { text -> PrintState.Done(text) },
@@ -181,22 +207,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // ---- Verwaltungsbereich / Kiosk ----
-
-    fun unlockAdmin(pin: String): Boolean {
-        val ok = pin == Kiosk.pin(getApplication())
-        if (ok) _state.update { it.copy(adminUnlocked = true, screen = Screen.Admin, message = null) }
-        return ok
-    }
-
-    fun lockAdmin() = _state.update { it.copy(adminUnlocked = false, screen = Screen.Start, printerTest = null, message = null) }
+    // ---- Setup ----
 
     fun setPin(pin: String) {
         if (pin.length >= 4) Kiosk.setPin(getApplication(), pin)
         _state.update { it.copy(message = if (pin.length >= 4) "PIN gespeichert." else "PIN braucht mindestens 4 Zeichen.") }
     }
-
-    fun kioskChanged(on: Boolean) = _state.update { it.copy(kioskOn = on) }
 
     private fun decodeUpright(file: File): Bitmap {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }

@@ -66,7 +66,7 @@ fun SplashScreen(onDone: () -> Unit) {
 
 /** Kundenansicht nach dem Foto: Bild, QR-Code zum Herunterladen, Drucken, Fertig. */
 @Composable
-fun ResultScreen(state: UiState, actions: Actions) {
+fun ResultScreen(state: UiState, actions: Actions, onAdmin: () -> Unit) {
     val context = LocalContext.current
     // Zurueck zum Start, wenn niemand mehr tippt; jede Zustandsaenderung startet die Frist neu.
     LaunchedEffect(state.photo, state.print, state.upload) { delay(RESULT_TIMEOUT_MS); actions.onHome() }
@@ -91,7 +91,7 @@ fun ResultScreen(state: UiState, actions: Actions) {
                     SonnButton("Nochmals versuchen", primary = false, onClick = actions.onRetryUpload)
                 }
                 is UploadState.Done -> state.qrBitmap?.let { bmp ->
-                    Text("QR-Code scannen und Foto herunterladen", color = Sonn.Navy, fontSize = 20.sp,
+                    Text("ZUM HERUNTERLADEN SCANNEN", color = Sonn.Navy, fontSize = 20.sp,
                         fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                     Box(Modifier.border(1.dp, Sonn.Line, MaterialShape).background(Color.White).padding(16.dp)) {
                         Image(bmp.asImageBitmap(), contentDescription = "QR-Code", modifier = Modifier.size(240.dp))
@@ -99,7 +99,12 @@ fun ResultScreen(state: UiState, actions: Actions) {
                 }
             }
 
-            SonnButton("Drucken", primary = true, onClick = actions.onPrint)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                SonnButton("−", primary = false, onClick = { actions.onCopies(state.copies - 1) })
+                Text("${state.copies} ${if (state.copies == 1) "Abzug" else "Abzüge"}", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                SonnButton("+", primary = false, onClick = { actions.onCopies(state.copies + 1) })
+            }
+            SonnButton("DRUCKEN", primary = true, onClick = actions.onPrint)
             when (val pr = state.print) {
                 PrintState.Idle -> Unit
                 PrintState.Printing -> Text("Foto wird gedruckt …", color = Sonn.Stone, fontSize = 18.sp)
@@ -110,12 +115,12 @@ fun ResultScreen(state: UiState, actions: Actions) {
                         onClick = { state.photo?.let { PhotoPrinter.print(context, it) } })
                 }
             }
-            SonnButton("Fertig", primary = false, onClick = actions.onHome)
+            SonnButton("FERTIG", primary = false, onClick = actions.onHome)
         }
     }
 
     Column(Modifier.fillMaxSize().background(Sonn.Cream)) {
-        SonnhaldeBanner(title = "Ihr Foto")
+        SonnhaldeBanner(title = "Ihr Foto", onLongPress = onAdmin)
         if (landscape) {
             Row(
                 Modifier.weight(1f).fillMaxWidth().navigationBarsPadding().padding(24.dp),

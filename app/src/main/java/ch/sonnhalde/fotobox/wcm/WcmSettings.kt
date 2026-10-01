@@ -17,6 +17,10 @@ data class WcmConfig(
     val autoPrint: Boolean = false,
     /** Frontkamera (Selfie) statt Rueckkamera verwenden. */
     val useFrontCamera: Boolean = true,
+    /** Text im Banner unten rechts auf dem Foto (max. 28 Zeichen), z. B. «Personalfest 2027». */
+    val bannerText: String = "",
+    /** Countdown vor der Aufnahme in Sekunden. */
+    val timerSeconds: Int = 3,
 ) {
     companion object {
         /** Standardadresse des WCMPlus-Portals (laut Anleitung 192.168.4.1). */
@@ -35,6 +39,8 @@ class WcmSettings(context: Context) {
         printerUri = prefs.getString("printerUri", "").orEmpty(),
         autoPrint = prefs.getBoolean("autoPrint", false),
         useFrontCamera = prefs.getBoolean("useFrontCamera", true),
+        bannerText = prefs.getString("bannerText", "").orEmpty(),
+        timerSeconds = prefs.getInt("timerSeconds", 3),
     )
 
     fun save(config: WcmConfig) {
@@ -46,6 +52,8 @@ class WcmSettings(context: Context) {
             .putString("printerUri", config.printerUri.trim())
             .putBoolean("autoPrint", config.autoPrint)
             .putBoolean("useFrontCamera", config.useFrontCamera)
+            .putString("bannerText", config.bannerText.take(28))
+            .putInt("timerSeconds", config.timerSeconds)
             .apply()
     }
 }

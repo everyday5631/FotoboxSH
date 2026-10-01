@@ -3,11 +3,20 @@
 Android-App (Kotlin, Jetpack Compose) im [Sonnhalde-Design-System](https://github.com/everyday5631/Se-Design):
 Navy-Banner mit «SONNHALDE»-Wortmarke, Gold-Linien, Cream-Hintergrund.
 
-## Ablauf (Kundensicht)
+## Modi (wie UpReach)
 
-Startbild (Sonne + «SONNHALDE») → **Startbildschirm** mit Live-Kamera: ein Tipp irgendwo startet den Countdown →
-Foto → **Ergebnis**: QR-Code zum Herunterladen, «Drucken», «Fertig». Nach 90 Sekunden ohne Eingabe geht es automatisch
-zurück zum Start. In der Verwaltung lässt sich «automatisch drucken» einschalten; dann entfällt auch der Druck-Tipp.
+- **Setup-Modus:** Übersicht mit Status (WCMPlus, Upload, Banner, Timer) und grossem **START**. Dort *Einstellungen*:
+  Banner-Text, Timer (3/5/10 s), Auto-Druck, Kamera, WCMPlus-/Drucker-/Upload-Adresse, PIN.
+- **Retail-Modus** (nach START, Kiosk/Vollbild): Live-Kamera → **START** tippen → Timer → Foto → Ergebnis mit
+  **ZUM HERUNTERLADEN SCANNEN** (QR-Code), Anzahl Abzüge (1–3), **DRUCKEN**, **FERTIG**. Nach 90 s ohne Eingabe
+  zurück zum Start. Beenden: langer Druck auf den Banner, dann PIN. Nach einem Neustart der App geht es direkt im
+  Retail-Modus weiter.
+
+## Foto-Banner
+
+Das Druckbild ist 3:2 (10 x 15 cm) mit hellem Banner unten: Sonnhalde-Logo mittig, frei wählbarer Text rechts
+(max. 28 Zeichen, z. B. «Personalfest 2027»; Schrift passt sich an). Das Logo ist eine Nachbildung; für das Original
+die Datei `app/src/main/res/drawable-nodpi/sonnhalde_logo.png` ablegen, sie wird automatisch verwendet.
 
 ## Ablauf (technisch)
 
