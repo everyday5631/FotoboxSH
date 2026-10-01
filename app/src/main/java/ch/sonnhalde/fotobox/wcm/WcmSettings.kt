@@ -11,6 +11,8 @@ data class WcmConfig(
     val token: String = "",
     /** HTTPS-Link des Power-Automate-Flows, der Fotos in SharePoint ablegt (leer = kein Upload). */
     val flowUrl: String = "",
+    /** Optionale IPP-Adresse des Druckers (z. B. ipp://192.168.4.1:631/ipp/print); leer = automatisch suchen. */
+    val printerUri: String = "",
 ) {
     companion object {
         /** Standardadresse des WCMPlus-Portals (laut Anleitung 192.168.4.1). */
@@ -26,6 +28,7 @@ class WcmSettings(context: Context) {
         statusPath = prefs.getString("statusPath", "/").orEmpty(),
         token = prefs.getString("token", "").orEmpty(),
         flowUrl = prefs.getString("flowUrl", "").orEmpty(),
+        printerUri = prefs.getString("printerUri", "").orEmpty(),
     )
 
     fun save(config: WcmConfig) {
@@ -34,6 +37,7 @@ class WcmSettings(context: Context) {
             .putString("statusPath", config.statusPath.trim())
             .putString("token", config.token.trim())
             .putString("flowUrl", config.flowUrl.trim())
+            .putString("printerUri", config.printerUri.trim())
             .apply()
     }
 }

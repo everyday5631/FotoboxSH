@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import ch.sonnhalde.fotobox.kiosk.Kiosk
 import ch.sonnhalde.fotobox.ui.Actions
 import ch.sonnhalde.fotobox.ui.MainScreen
 import ch.sonnhalde.fotobox.ui.SonnhaldeTheme
@@ -33,10 +34,37 @@ class MainActivity : ComponentActivity() {
                         onCameraError = vm::showError,
                         onRetryUpload = vm::uploadPhoto,
                         onHome = vm::backToHome,
+                        onPrint = vm::printPhoto,
+                        onTestPrinter = vm::testPrinter,
+                        onUnlockAdmin = vm::unlockAdmin,
+                        onLockAdmin = vm::lockAdmin,
+                        onExitKiosk = ::toggleKiosk,
+                        onSetPin = vm::setPin,
                     ),
                 )
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        Kiosk.apply(this)
+    }
+
+    /** Im Kiosk-Modus ist die Zurueck-Taste gesperrt. */
+    @Deprecated("Zurueck-Taste im Kiosk sperren")
+    override fun onBackPressed() {
+        if (!Kiosk.isEnabled(this)) super.onBackPressed()
+    }
+
+    private fun toggleKiosk() {
+        if (Kiosk.isEnabled(this)) {
+            Kiosk.exit(this)
+        } else {
+            Kiosk.setEnabled(this, true)
+            Kiosk.apply(this)
+        }
+        vm.kioskChanged(Kiosk.isEnabled(this))
     }
 
     override fun onNewIntent(intent: Intent) {

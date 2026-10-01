@@ -8,6 +8,8 @@ import android.media.ExifInterface
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import ch.sonnhalde.fotobox.kiosk.Kiosk
+import ch.sonnhalde.fotobox.print.IppPrinter
 import ch.sonnhalde.fotobox.qr.QrCode
 import ch.sonnhalde.fotobox.upload.SharePointUploader
 import ch.sonnhalde.fotobox.wcm.WcmClient
@@ -33,12 +35,24 @@ sealed interface UploadState {
     data class Failed(val reason: String) : UploadState
 }
 
+sealed interface PrintState {
+    data object Idle : PrintState
+    data object Printing : PrintState
+    data class Done(val text: String) : PrintState
+    data class Failed(val reason: String) : PrintState
+}
+
 data class UiState(
     val config: WcmConfig = WcmConfig(),
     val status: WcmStatus = WcmStatus.Unknown,
     val screen: Screen = Screen.Home,
     val photo: Bitmap? = null,
     val upload: UploadState = UploadState.Idle,
+    val print: PrintState = PrintState.Idle,
+    /** Verwaltungsbereich (Einstellungen, QR aus Link, Kiosk beenden) nach PIN-Eingabe sichtbar. */
+    val adminUnlocked: Boolean = false,
+    val kioskOn: Boolean = true,
+    val printerTest: String? = null,
     val qrInput: String = "",
     val qrBitmap: Bitmap? = null,
     val savedUri: Uri? = null,
@@ -49,9 +63,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val settings = WcmSettings(app)
     private val client = WcmClient()
     private val uploader = SharePointUploader()
+    private val printer = IppPrinter()
     private var photoJpeg: ByteArray? = null
 
-    private val _state = MutableStateFlow(UiState(config = settings.load()))
+    private val _state = MutableStateFlow(UiState(config = settings.load(), kioskOn = Kiosk.isEnabled(app)))
     val state: StateFlow<UiState> = _state.asStateFlow()
 
     init { checkConnection() }
@@ -76,7 +91,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun backToHome() {
         photoJpeg = null
-        _state.update { it.copy(screen = Screen.Home, photo = null, upload = UploadState.Idle, qrBitmap = null, savedUri = null, message = null) }
+        _state.update {
+            it.copy(screen = Screen.Home, photo = null, upload = UploadState.Idle, print = PrintState.Idle, qrBitmap = null, savedUri = null, message = null)
+        }
     }
 
     fun showError(text: String) = _state.update { it.copy(screen = Screen.Home, message = text) }
@@ -96,7 +113,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 onSuccess = { (bmp, jpeg) ->
                     photoJpeg = jpeg
                     _state.update {
-                        it.copy(screen = Screen.Result, photo = bmp, upload = UploadState.Idle, qrBitmap = null, savedUri = null, message = null)
+                        it.copy(screen = Screen.Result, photo = bmp, upload = UploadState.Idle, print = PrintState.Idle, qrBitmap = null, savedUri = null, message = null)
                     }
                     uploadPhoto()
                 },
@@ -124,6 +141,54 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             )
         }
     }
+
+    /** Direktdruck per IPP; bei Fehler zeigt die Oberflaeche den Android-Druckdialog als Ausweg an. */
+    fun printPhoto() {
+        val jpeg = photoJpeg ?: return
+        val landscape = (_state.value.photo?.let { it.width >= it.height }) ?: true
+        _state.update { it.copy(print = PrintState.Printing) }
+        viewModelScope.launch {
+            val result = printer.printJpeg(_state.value.config, jpeg, landscape)
+            _state.update {
+                it.copy(print = result.fold(
+                    onSuccess = { text -> PrintState.Done(text) },
+                    onFailure = { e -> PrintState.Failed(e.message ?: "Drucken fehlgeschlagen") },
+                ))
+            }
+        }
+    }
+
+    fun testPrinter() {
+        _state.update { it.copy(printerTest = "Suche Drucker …") }
+        viewModelScope.launch {
+            val result = printer.discover(_state.value.config)
+            val text = result.fold(
+                onSuccess = { f ->
+                    "Gefunden: ${f.ippUri}\n" + listOf("printer-name", "printer-state", "printer-state-reasons", "document-format-supported", "media-supported")
+                        .joinToString("\n") { k -> "$k: " + f.info.attrs[k].orEmpty().joinToString(", ").take(300) }
+                },
+                onFailure = { e -> e.message ?: "Fehler" },
+            )
+            _state.update { it.copy(printerTest = text) }
+        }
+    }
+
+    // ---- Verwaltungsbereich / Kiosk ----
+
+    fun unlockAdmin(pin: String): Boolean {
+        val ok = pin == Kiosk.pin(getApplication())
+        if (ok) _state.update { it.copy(adminUnlocked = true) }
+        return ok
+    }
+
+    fun lockAdmin() = _state.update { it.copy(adminUnlocked = false, printerTest = null) }
+
+    fun setPin(pin: String) {
+        if (pin.length >= 4) Kiosk.setPin(getApplication(), pin)
+        _state.update { it.copy(message = if (pin.length >= 4) "PIN gespeichert." else "PIN braucht mindestens 4 Zeichen.") }
+    }
+
+    fun kioskChanged(on: Boolean) = _state.update { it.copy(kioskOn = on) }
 
     private fun decodeUpright(file: File): Bitmap {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }

@@ -1,6 +1,8 @@
 package ch.sonnhalde.fotobox.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,8 +26,8 @@ import androidx.compose.ui.unit.sp
  * Navy-Flaeche, Wortmarke "SONN" + "HALDE" in Logo-Gold, Logo-Gold-Kante unten.
  */
 @Composable
-fun SonnhaldeBanner(title: String, kicker: String = "Pflege- und Betreuungszentrum") {
-    Box(Modifier.fillMaxWidth().background(Sonn.Navy)) {
+fun SonnhaldeBanner(title: String, kicker: String = "Pflege- und Betreuungszentrum", onLongPress: () -> Unit = {}) {
+    Box(Modifier.fillMaxWidth().background(Sonn.Navy).pointerInput(Unit) { detectTapGestures(onLongPress = { onLongPress() }) }) {
         Column(Modifier.statusBarsPadding().padding(start = 24.dp, end = 24.dp, top = 18.dp, bottom = 22.dp)) {
             Text(
                 text = buildAnnotatedString {

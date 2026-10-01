@@ -23,6 +23,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -41,10 +42,12 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ch.sonnhalde.fotobox.Screen
 import ch.sonnhalde.fotobox.UiState
+import ch.sonnhalde.fotobox.PrintState
 import ch.sonnhalde.fotobox.UploadState
 import ch.sonnhalde.fotobox.camera.CameraScreen
 import ch.sonnhalde.fotobox.print.PhotoPrinter
@@ -63,6 +66,12 @@ class Actions(
     val onCameraError: (String) -> Unit,
     val onRetryUpload: () -> Unit,
     val onHome: () -> Unit,
+    val onPrint: () -> Unit,
+    val onTestPrinter: () -> Unit,
+    val onUnlockAdmin: (String) -> Boolean,
+    val onLockAdmin: () -> Unit,
+    val onExitKiosk: () -> Unit,
+    val onSetPin: (String) -> Unit,
 )
 
 @Composable
@@ -71,8 +80,13 @@ fun MainScreen(state: UiState, actions: Actions) {
         CameraScreen(onCaptured = actions.onPhotoCaptured, onCancel = actions.onHome, onFailure = actions.onCameraError)
         return
     }
+    var askPin by remember { mutableStateOf(false) }
+    if (askPin) {
+        PinDialog(onDismiss = { askPin = false }, onSubmit = { actions.onUnlockAdmin(it).also { ok -> if (ok) askPin = false } })
+    }
     Column(Modifier.fillMaxSize().background(Sonn.Cream)) {
-        SonnhaldeBanner(title = "Fotobox")
+        // Langer Druck auf den Banner oeffnet den Verwaltungsbereich (PIN).
+        SonnhaldeBanner(title = "Fotobox", onLongPress = { askPin = true })
         Column(
             Modifier.weight(1f).verticalScroll(rememberScrollState()).navigationBarsPadding()
                 .padding(horizontal = 24.dp, vertical = 24.dp),
@@ -83,10 +97,47 @@ fun MainScreen(state: UiState, actions: Actions) {
             } else {
                 state.message?.let { Notice(it) }
                 SonnButton("Foto aufnehmen", primary = true, onClick = actions.onOpenCamera)
-                ConnectionSection(state, actions.onConfigChange, actions.onCheckConnection)
-                QrSection(state, actions.onQrInput, actions.onGenerate, actions.onDownload)
+                if (state.adminUnlocked) AdminSection(state, actions)
             }
         }
+    }
+}
+
+@Composable
+private fun PinDialog(onDismiss: () -> Unit, onSubmit: (String) -> Boolean) {
+    var pin by remember { mutableStateOf("") }
+    var wrong by remember { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Verwaltung") },
+        text = {
+            OutlinedTextField(
+                value = pin,
+                onValueChange = { pin = it; wrong = false },
+                label = { Text(if (wrong) "PIN falsch" else "PIN") },
+                isError = wrong,
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+            )
+        },
+        confirmButton = { TextButton(onClick = { wrong = !onSubmit(pin) }) { Text("OK") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen") } },
+    )
+}
+
+@Composable
+private fun AdminSection(state: UiState, actions: Actions) {
+    var newPin by remember { mutableStateOf("") }
+    SectionTitle("Verwaltung", "Einstellungen")
+    ConnectionSection(state, actions.onConfigChange, actions.onCheckConnection, actions.onTestPrinter)
+    QrSection(state, actions.onQrInput, actions.onGenerate, actions.onDownload)
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionTitle("Kiosk", if (state.kioskOn) "Kiosk-Modus aktiv" else "Kiosk-Modus aus")
+        SonnField("Neue PIN (mind. 4 Zeichen)", newPin, KeyboardType.NumberPassword) { newPin = it }
+        SonnButton("PIN speichern", primary = false, onClick = { actions.onSetPin(newPin); newPin = "" })
+        SonnButton(if (state.kioskOn) "Kiosk beenden" else "Kiosk starten", primary = false, onClick = actions.onExitKiosk)
+        SonnButton("Verwaltung schliessen", primary = true, onClick = actions.onLockAdmin)
     }
 }
 
@@ -96,8 +147,17 @@ private fun ResultSection(state: UiState, actions: Actions) {
     SectionTitle("Fertig", "Ihr Foto")
     state.photo?.let { photo ->
         Image(photo.asImageBitmap(), contentDescription = "Foto", modifier = Modifier.fillMaxWidth().border(1.dp, Sonn.Line, MaterialShape))
-        SonnButton("Drucken", primary = true, onClick = { PhotoPrinter.print(context, photo) })
-        Text("Im Druckdialog den Drucker «QW410» und das Papierformat «4 x 6 in.» wählen.", color = Sonn.Stone, fontSize = 13.sp)
+        SonnButton("Drucken", primary = true, onClick = actions.onPrint)
+        when (val pr = state.print) {
+            PrintState.Idle -> Unit
+            PrintState.Printing -> Text("Foto wird gedruckt …", color = Sonn.Stone)
+            is PrintState.Done -> Text(pr.text, color = Sonn.Ok, fontWeight = FontWeight.Bold)
+            is PrintState.Failed -> {
+                Notice(pr.reason)
+                // Ausweg: normaler Android-Druckdialog (Drucker «QW410», Papierformat «4 x 6 in.»).
+                SonnButton("Über Android-Druckdialog drucken", primary = false, onClick = { PhotoPrinter.print(context, photo) })
+            }
+        }
     }
     when (val u = state.upload) {
         UploadState.Idle -> Unit
@@ -131,7 +191,7 @@ internal fun SectionTitle(eyebrow: String, title: String) {
 }
 
 @Composable
-private fun ConnectionSection(state: UiState, onConfigChange: (WcmConfig) -> Unit, onCheck: () -> Unit) {
+private fun ConnectionSection(state: UiState, onConfigChange: (WcmConfig) -> Unit, onCheck: () -> Unit, onTestPrinter: () -> Unit) {
     var editing by remember { mutableStateOf(false) }
     var draft by remember(state.config) { mutableStateOf(state.config) }
 
@@ -161,12 +221,16 @@ private fun ConnectionSection(state: UiState, onConfigChange: (WcmConfig) -> Uni
             SonnButton(if (editing) "Schliessen" else "Einstellungen", onClick = { editing = !editing }, primary = false)
         }
 
+        SonnButton("Drucker testen", primary = false, onClick = onTestPrinter)
+        state.printerTest?.let { Text(it, color = Sonn.Stone, fontSize = 13.sp) }
+
         if (editing) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 SonnField("Adresse von WCMPlus", draft.baseUrl, KeyboardType.Uri) { draft = draft.copy(baseUrl = it) }
                 SonnField("Pfad für Verbindungstest", draft.statusPath, KeyboardType.Uri) { draft = draft.copy(statusPath = it) }
                 SonnField("Token (optional)", draft.token, KeyboardType.Password) { draft = draft.copy(token = it) }
                 SonnField("Upload-Link (Power-Automate-Flow für SharePoint)", draft.flowUrl, KeyboardType.Uri) { draft = draft.copy(flowUrl = it) }
+                SonnField("Drucker-Adresse IPP (leer = automatisch)", draft.printerUri, KeyboardType.Uri) { draft = draft.copy(printerUri = it) }
                 SonnButton("Speichern", primary = true, onClick = { onConfigChange(draft); editing = false })
             }
         }

@@ -14,6 +14,26 @@ Navy-Banner mit «SONNHALDE»-Wortmarke, Gold-Linien, Cream-Hintergrund.
 
 Es wird keine Cloud eines Herstellers benötigt.
 
+## Kiosk-Modus (wie UpReach)
+
+Die App startet im Vollbild, sperrt die Zurück-Taste und hält den Bildschirm an. Lock-Task-Modus:
+
+- **Mit Device Owner (empfohlen):** einmalig per ADB, das Gerät darf dafür keine Konten haben und keinen anderen
+  Device Owner (z. B. UpReach) besitzen:
+  `adb shell dpm set-device-owner ch.sonnhalde.fotobox/.kiosk.AdminReceiver`
+  Danach startet der Kiosk ohne Rückfrage und ohne Ausstiegsgeste.
+- **Ohne Device Owner:** Android «Bildschirm anheften» (einmalige Rückfrage, Ausstieg per Systemgeste).
+
+**Verwaltung:** langer Druck auf den Banner → PIN (Standard `1234`, bitte ändern). Dort: Einstellungen, QR aus Link,
+Drucker testen, Kiosk beenden/starten. Gäste sehen nur «Foto aufnehmen».
+
+## Drucken
+
+«Drucken» sendet das Foto per **IPP direkt** an den QW410 (kein Android-Dialog). Die genaue IPP-Adresse ist nicht
+dokumentiert; ohne Eintrag probiert die App übliche Pfade auf `192.168.4.1:631`. Unter *Verwaltung → Drucker testen*
+sieht man das Ergebnis; eine gefundene Adresse kann bei Bedarf unter *Drucker-Adresse IPP* fest eingetragen werden.
+Schlägt der Direktdruck fehl, erscheint ein Knopf für den normalen Android-Druckdialog (4 x 6 in.).
+
 ## WCMPlus
 
 WCMPlus ist ein WLAN-Druckmodul (Portal standardmässig `http://192.168.4.1`). Gedruckt wird über den normalen
