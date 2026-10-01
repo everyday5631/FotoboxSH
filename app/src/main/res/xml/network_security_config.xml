@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- WCMPlus laeuft lokal (localhost / LAN) meist ohne TLS, daher Klartext-HTTP erlaubt.
+     SharePoint-Links werden nicht abgerufen, nur als QR-Code kodiert. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

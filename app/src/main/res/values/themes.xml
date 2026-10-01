@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.Fotobox" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#233446</item>
+        <item name="android:navigationBarColor">#FDF9F6</item>
+        <item name="android:windowBackground">#FDF9F6</item>
+    </style>
+</resources>
