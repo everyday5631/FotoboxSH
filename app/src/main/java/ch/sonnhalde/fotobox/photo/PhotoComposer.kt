@@ -44,6 +44,54 @@ object PhotoComposer {
         return out
     }
 
+    private val RAINBOW = intArrayOf(
+        Color.parseColor("#E5473C"), Color.parseColor("#F28C28"), Color.parseColor("#F2C230"),
+        Color.parseColor("#5DB55E"), Color.parseColor("#3AA6D8"), Color.parseColor("#8E5AA8"), Color.parseColor("#E8579A"),
+    )
+
+    /** Bunter Text-Sticker (wie bei UpReach) auf weissem Grund; null bei leerem Text. */
+    fun stickerBitmap(text: String, heightPx: Int): Bitmap? {
+        val t = text.trim().take(MAX_TEXT)
+        if (t.isEmpty()) return null
+        val size = heightPx * 0.58f
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            textSize = size; typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+        }
+        val pad = heightPx * 0.28f
+        val textW = paint.measureText(t)
+        val bmp = Bitmap.createBitmap((textW + pad * 2).toInt(), heightPx, Bitmap.Config.ARGB_8888)
+        val c = Canvas(bmp)
+        c.drawRoundRect(RectF(0f, 0f, bmp.width.toFloat(), bmp.height.toFloat()), heightPx * 0.08f, heightPx * 0.08f,
+            Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(235, 255, 255, 255) })
+        val baseline = heightPx / 2f - (paint.ascent() + paint.descent()) / 2
+        var x = pad
+        var colorIndex = 0
+        for (ch in t) {
+            val w = paint.measureText(ch.toString())
+            if (ch != ' ') {
+                paint.color = Color.argb(90, 0, 0, 0)
+                c.drawText(ch.toString(), x + size * 0.04f, baseline + size * 0.04f, paint)
+                paint.color = RAINBOW[colorIndex++ % RAINBOW.size]
+                c.drawText(ch.toString(), x, baseline, paint)
+            }
+            x += w
+        }
+        return bmp
+    }
+
+    /** Digitale Version (fuer QR/Download): Foto in Originalformat mit Text-Sticker unten rechts. */
+    fun composeDigital(photo: Bitmap, bannerText: String, maxWidth: Int = 1800): Bitmap {
+        val scale = minOf(1f, maxWidth / photo.width.toFloat())
+        val w = (photo.width * scale).toInt()
+        val h = (photo.height * scale).toInt()
+        val out = Bitmap.createScaledBitmap(photo, w, h, true).copy(Bitmap.Config.ARGB_8888, true)
+        stickerBitmap(bannerText, (h * 0.09f).toInt())?.let { sticker ->
+            val margin = h * 0.04f
+            Canvas(out).drawBitmap(sticker, w - sticker.width - margin, h - sticker.height - margin, null)
+        }
+        return out
+    }
+
     /** Kleine Vorschau fuer die Einstellungen (Platzhalterfoto). */
     fun preview(context: Context, bannerText: String): Bitmap {
         val w = 900

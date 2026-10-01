@@ -10,7 +10,21 @@ import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.painterResource
+import ch.sonnhalde.fotobox.R
+import ch.sonnhalde.fotobox.photo.PhotoComposer
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -68,6 +82,7 @@ private suspend fun cameraProvider(context: android.content.Context): ProcessCam
 fun CameraScreen(
     useFront: Boolean,
     timerSeconds: Int,
+    bannerText: String,
     message: String?,
     onCaptured: (File) -> Unit,
     onFailure: (String) -> Unit,
@@ -130,6 +145,8 @@ fun CameraScreen(
         }
     }
 
+    // Sticker mit dem Banner-Text als Live-Vorschau (so erscheint er auf der digitalen Version).
+    val sticker = remember(bannerText) { PhotoComposer.stickerBitmap(bannerText, 120) }
     Box(
         Modifier.fillMaxSize().background(Sonn.NavyDeep)
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { shoot() },
@@ -144,35 +161,42 @@ fun CameraScreen(
             )
         }
 
-        Column(Modifier.align(Alignment.TopCenter)) {
-            SonnhaldeBanner(title = "Fotobox", onLongPress = onAdmin)
-            message?.let { Box(Modifier.padding(16.dp)) { Notice(it) } }
+        // Oben links: Logo (langer Druck = Verwaltung) und Zurueck-Knopf
+        Column(Modifier.align(Alignment.TopStart).statusBarsPadding().padding(start = 24.dp, top = 8.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Box(
+                Modifier.width(120.dp).background(Color(0xCCFFFFFF)).padding(8.dp)
+                    .pointerInput(Unit) { detectTapGestures(onLongPress = { onAdmin() }) },
+            ) {
+                Image(painterResource(R.drawable.sonnhalde_logo_vertical), contentDescription = "Sonnhalde", modifier = Modifier.fillMaxWidth())
+            }
+            Box(
+                Modifier.size(52.dp).clip(CircleShape).background(Color.Black).clickable(onClick = onBack),
+                contentAlignment = Alignment.Center,
+            ) { Text("‹", color = Color.White, fontSize = 34.sp) }
         }
 
-        Text(
-            "‹ Zurück", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(Alignment.BottomStart).navigationBarsPadding().padding(24.dp)
-                .clip(RoundedCornerShape(3.dp)).background(Color(0x66000000)).clickable(onClick = onBack).padding(horizontal = 18.dp, vertical = 12.dp),
+        message?.let { Box(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(16.dp).width(420.dp)) { Notice(it) } }
+
+        // Rechts: runder Ausloeser
+        Box(
+            Modifier.align(Alignment.CenterEnd).padding(end = 32.dp).size(88.dp)
+                .clip(CircleShape).background(Color.White).border(5.dp, Color(0x55000000), CircleShape)
+                .clickable { shoot() },
         )
 
-        val c = countdown
-        if (c != null) {
+        // Unten rechts: Text-Sticker
+        sticker?.let {
+            Image(
+                it.asImageBitmap(), contentDescription = null,
+                modifier = Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(24.dp).height(56.dp),
+            )
+        }
+
+        countdown?.let { c ->
             Text(
                 text = c.toString(), color = Sonn.LogoGold, fontSize = 160.sp, fontWeight = FontWeight.Bold,
                 modifier = Modifier.align(Alignment.Center),
             )
-        } else {
-            Column(
-                Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    "Foto aufnehmen",
-                    color = Sonn.Navy, fontSize = 30.sp, fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clip(RoundedCornerShape(3.dp)).background(Sonn.LogoGold)
-                        .padding(horizontal = 40.dp, vertical = 20.dp),
-                )
-            }
         }
     }
 }

@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit
 sealed interface WcmStatus {
     data object Unknown : WcmStatus
     data object Checking : WcmStatus
-    data class Online(val httpCode: Int) : WcmStatus
+    data class Online(val httpCode: Int, val via: String? = null) : WcmStatus
     data class Offline(val reason: String) : WcmStatus
 }
 

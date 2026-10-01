@@ -104,6 +104,7 @@ fun MainScreen(state: UiState, actions: Actions) {
         Screen.Start -> CameraScreen(
             useFront = state.config.useFrontCamera,
             timerSeconds = state.config.timerSeconds,
+            bannerText = state.config.bannerText,
             message = state.message,
             onCaptured = actions.onPhotoCaptured,
             onFailure = actions.onCameraError,
@@ -151,7 +152,7 @@ private fun OverviewScreen(state: UiState, actions: Actions) {
             val (dot, wcm) = when (val s = state.status) {
                 WcmStatus.Unknown -> Sonn.Stone to "WCMPlus: noch nicht geprüft"
                 WcmStatus.Checking -> Sonn.Stone to "WCMPlus: wird geprüft …"
-                is WcmStatus.Online -> Sonn.Ok to "WCMPlus: verbunden"
+                is WcmStatus.Online -> Sonn.Ok to ("WCMPlus: verbunden" + (s.via?.let { " ($it)" } ?: ""))
                 is WcmStatus.Offline -> Sonn.Error to "WCMPlus: nicht erreichbar"
             }
             StatusLine(dot, wcm)
@@ -278,7 +279,7 @@ private fun ConnectionSection(state: UiState, onConfigChange: (WcmConfig) -> Uni
         val (dot, text) = when (val s = state.status) {
             WcmStatus.Unknown -> Sonn.Stone to "Noch nicht geprüft"
             WcmStatus.Checking -> Sonn.Stone to "Verbindung wird geprüft …"
-            is WcmStatus.Online -> Sonn.Ok to "Verbunden (HTTP ${s.httpCode})"
+            is WcmStatus.Online -> Sonn.Ok to (if (s.via != null) "Verbunden über ${s.via} (automatisch gefunden)" else "Verbunden (HTTP ${s.httpCode})")
             is WcmStatus.Offline -> Sonn.Error to "Nicht erreichbar: ${s.reason}"
         }
         Row(

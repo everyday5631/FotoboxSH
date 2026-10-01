@@ -36,6 +36,9 @@ class IppPrinter(
 
     @Volatile private var cached: Found? = null
 
+    /** Adresse des zuletzt gefundenen Druckers, z. B. 172.16.220.211. */
+    fun foundHost(): String? = cached?.httpUrl?.let { runCatching { URI(it).host }.getOrNull() }
+
     /** Sucht den Drucker; liefert bei Misserfolg eine Fehlerbeschreibung mit allen Versuchen. */
     suspend fun discover(config: WcmConfig): Result<Found> = withContext(Dispatchers.IO) {
         cached?.takeIf { config.printerUri.isBlank() }?.let { return@withContext Result.success(it) }

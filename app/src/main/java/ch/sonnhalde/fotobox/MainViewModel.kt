@@ -48,7 +48,9 @@ data class UiState(
     val config: WcmConfig = WcmConfig(),
     val status: WcmStatus = WcmStatus.Unknown,
     val screen: Screen = Screen.Splash,
+    /** Druck-Version (3:2 mit Logo-Banner) und digitale Version (mit Text-Sticker, fuer QR/Download). */
     val photo: Bitmap? = null,
+    val digital: Bitmap? = null,
     val upload: UploadState = UploadState.Idle,
     val print: PrintState = PrintState.Idle,
     /** Retail-Modus aktiv: Kiosk fuer Gaeste (Foto, Timer, Drucken, QR). Sonst Setup-Modus. */
@@ -71,6 +73,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val uploader = SharePointUploader()
     private val printer = IppPrinter(app)
     private var photoJpeg: ByteArray? = null
+    private var digitalJpeg: ByteArray? = null
 
     private val _state = MutableStateFlow(UiState(config = settings.load(), retail = Kiosk.isEnabled(app)))
     val state: StateFlow<UiState> = _state.asStateFlow()
@@ -92,7 +95,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun checkConnection() {
         _state.update { it.copy(status = WcmStatus.Checking) }
         viewModelScope.launch {
-            val status = client.checkConnection(_state.value.config)
+            var status = client.checkConnection(_state.value.config)
+            if (status is WcmStatus.Offline) {
+                // WCMPlus haengt oft im lokalen WLAN (andere IP als 192.168.4.1): per mDNS suchen wie Mopria.
+                val found = printer.discover(_state.value.config).getOrNull()
+                if (found != null) status = WcmStatus.Online(200, via = printer.foundHost())
+            }
             _state.update { it.copy(status = status) }
         }
     }
@@ -110,7 +118,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun exitRetail() {
         photoJpeg = null
-        _state.update { it.copy(retail = false, screen = Screen.Overview, photo = null, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, message = null) }
+        digitalJpeg = null
+        _state.update { it.copy(retail = false, screen = Screen.Overview, photo = null, digital = null, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, message = null) }
     }
 
     // ---- Startbildschirm-Hintergrund (Bild aus der Galerie) ----
@@ -150,8 +159,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun backToHome() {
         photoJpeg = null
+        digitalJpeg = null
         _state.update {
-            it.copy(screen = Screen.Welcome, photo = null, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, savedUri = null, message = null)
+            it.copy(screen = Screen.Welcome, photo = null, digital = null, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, savedUri = null, message = null)
         }
     }
 
@@ -168,18 +178,21 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val prepared = withContext(Dispatchers.Default) {
                 runCatching {
-                    val bmp = PhotoComposer.compose(getApplication(), decodeUpright(file), _state.value.config.bannerText)
-                    val out = ByteArrayOutputStream()
-                    bmp.compress(Bitmap.CompressFormat.JPEG, 92, out)
-                    bmp to out.toByteArray()
+                    val upright = decodeUpright(file)
+                    val text = _state.value.config.bannerText
+                    val print = PhotoComposer.compose(getApplication(), upright, text)
+                    val digital = PhotoComposer.composeDigital(upright, text)
+                    fun jpeg(b: Bitmap) = ByteArrayOutputStream().also { b.compress(Bitmap.CompressFormat.JPEG, 92, it) }.toByteArray()
+                    Triple(print, digital, jpeg(print) to jpeg(digital))
                 }
             }
             file.delete()
             prepared.fold(
-                onSuccess = { (bmp, jpeg) ->
-                    photoJpeg = jpeg
+                onSuccess = { (bmp, digital, jpegs) ->
+                    photoJpeg = jpegs.first
+                    digitalJpeg = jpegs.second
                     _state.update {
-                        it.copy(screen = Screen.Result, photo = bmp, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, savedUri = null, message = null)
+                        it.copy(screen = Screen.Result, photo = bmp, digital = digital, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, savedUri = null, message = null)
                     }
                     uploadPhoto()
                     if (_state.value.config.autoPrint) printPhoto()
@@ -190,7 +203,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun uploadPhoto() {
-        val jpeg = photoJpeg ?: return
+        val jpeg = digitalJpeg ?: return
         val flowUrl = _state.value.config.flowUrl
         if (flowUrl.isBlank()) {
             _state.update { it.copy(upload = UploadState.Failed("Kein Upload-Link eingestellt (Einstellungen).")) }
