@@ -101,7 +101,6 @@ fun CameraScreen(
 
     val previewView = remember { PreviewView(context).apply { scaleType = PreviewView.ScaleType.FILL_CENTER } }
     val imageCapture = remember { ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY).build() }
-    var provider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
     var countdown by remember { mutableStateOf<Int?>(null) }
     // Niemand tippt mehr: zurueck zum Startbildschirm.
     LaunchedEffect(Unit) { delay(60_000); if (countdown == null) onBack() }
@@ -110,7 +109,6 @@ fun CameraScreen(
         if (!hasPermission) return@LaunchedEffect
         try {
             val p = cameraProvider(context)
-            provider = p
             val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
             p.unbindAll()
             val selector = if (useFront) CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
@@ -126,7 +124,11 @@ fun CameraScreen(
         }
     }
     // Kamera freigeben, sobald der Startbildschirm verlassen wird.
-    DisposableEffect(provider) { onDispose { provider?.unbindAll() } }
+    // Nur beim Verlassen des Bildschirms (Key = Unit). Wichtig: NICHT an einen State koppeln, sonst loest die
+    // Freigabe direkt nach dem Start der Kamera aus und der Ausloeser meldet «Not bound to a valid Camera».
+    DisposableEffect(Unit) {
+        onDispose { runCatching { ProcessCameraProvider.getInstance(context).get().unbindAll() } }
+    }
 
     fun shoot() {
         if (countdown != null || !hasPermission) return
