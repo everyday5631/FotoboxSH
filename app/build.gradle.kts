@@ -16,6 +16,17 @@ android {
         versionName = "0.1.0"
     }
 
+    // Fester Debug-Schluessel (nicht geheim): jeder CI-Build ist gleich signiert, daher laesst sich ein
+    // neuer Build direkt ueber die installierte App installieren, ohne vorher zu deinstallieren.
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false

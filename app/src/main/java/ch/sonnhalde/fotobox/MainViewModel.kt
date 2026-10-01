@@ -27,8 +27,8 @@ import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
 
-/** Splash -> Overview (Setup) <-> Settings; Start/Result gehoeren zum Retail-Modus (Kiosk). */
-enum class Screen { Splash, Overview, Settings, Start, Result }
+/** Splash -> Overview (Setup) <-> Settings; Welcome/Start/Result gehoeren zum Retail-Modus (Kiosk). */
+enum class Screen { Splash, Overview, Settings, Welcome, Start, Result }
 
 sealed interface UploadState {
     data object Idle : UploadState
@@ -54,6 +54,8 @@ data class UiState(
     /** Retail-Modus aktiv: Kiosk fuer Gaeste (Foto, Timer, Drucken, QR). Sonst Setup-Modus. */
     val retail: Boolean = false,
     val copies: Int = 1,
+    /** Zaehler, der sich beim Wechsel des Startbildschirm-Hintergrunds erhoeht (zum Neuladen). */
+    val bgVersion: Int = 0,
     val printerTest: String? = null,
     val qrInput: String = "",
     val qrBitmap: Bitmap? = null,
@@ -98,15 +100,46 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     // ---- Foto-Ablauf: Kamera -> Ergebnis (Upload, QR, Druck) ----
 
     fun finishSplash() = _state.update {
-        if (it.screen != Screen.Splash) it else it.copy(screen = if (it.retail) Screen.Start else Screen.Overview)
+        if (it.screen != Screen.Splash) it else it.copy(screen = if (it.retail) Screen.Welcome else Screen.Overview)
     }
 
-    fun startRetail() = _state.update { it.copy(retail = true, screen = Screen.Start, message = null) }
+    fun startRetail() = _state.update { it.copy(retail = true, screen = Screen.Welcome, message = null) }
+
+    /** «jetzt starten»: Kamera mit Live-Bild. */
+    fun startCapture() = _state.update { it.copy(screen = Screen.Start, message = null) }
 
     fun exitRetail() {
         photoJpeg = null
         _state.update { it.copy(retail = false, screen = Screen.Overview, photo = null, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, message = null) }
     }
+
+    // ---- Startbildschirm-Hintergrund (Bild aus der Galerie) ----
+
+    fun setStartBackground(uri: Uri) {
+        viewModelScope.launch {
+            val ok = withContext(Dispatchers.IO) {
+                runCatching {
+                    val resolver = getApplication<Application>().contentResolver
+                    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+                    var sample = 1
+                    while (maxOf(bounds.outWidth, bounds.outHeight) / sample > 2400) sample *= 2
+                    val bmp = resolver.openInputStream(uri)?.use {
+                        BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
+                    } ?: error("Bild nicht lesbar")
+                    startBackgroundFile().outputStream().use { bmp.compress(Bitmap.CompressFormat.JPEG, 88, it) }
+                }.isSuccess
+            }
+            _state.update { it.copy(bgVersion = it.bgVersion + 1, message = if (ok) "Hintergrundbild gespeichert." else "Hintergrundbild konnte nicht geladen werden.") }
+        }
+    }
+
+    fun clearStartBackground() {
+        startBackgroundFile().delete()
+        _state.update { it.copy(bgVersion = it.bgVersion + 1, message = "Hintergrundbild entfernt.") }
+    }
+
+    fun startBackgroundFile() = File(getApplication<Application>().filesDir, "start_bg.jpg")
 
     fun openSettings() = _state.update { it.copy(screen = Screen.Settings, message = null) }
     fun closeSettings() = _state.update { it.copy(screen = Screen.Overview, printerTest = null, message = null) }
@@ -118,12 +151,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun backToHome() {
         photoJpeg = null
         _state.update {
-            it.copy(screen = Screen.Start, photo = null, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, savedUri = null, message = null)
+            it.copy(screen = Screen.Welcome, photo = null, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, savedUri = null, message = null)
         }
     }
 
     fun showError(text: String) {
-        _state.update { it.copy(screen = Screen.Start, message = text) }
+        _state.update { it.copy(screen = Screen.Welcome, message = text) }
         // Meldung nach einigen Sekunden ausblenden, damit der Startbildschirm sauber bleibt.
         viewModelScope.launch {
             kotlinx.coroutines.delay(8000)

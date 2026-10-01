@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
@@ -71,6 +72,7 @@ fun CameraScreen(
     onCaptured: (File) -> Unit,
     onFailure: (String) -> Unit,
     onAdmin: () -> Unit,
+    onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -86,6 +88,8 @@ fun CameraScreen(
     val imageCapture = remember { ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY).build() }
     var provider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
     var countdown by remember { mutableStateOf<Int?>(null) }
+    // Niemand tippt mehr: zurueck zum Startbildschirm.
+    LaunchedEffect(Unit) { delay(60_000); if (countdown == null) onBack() }
 
     LaunchedEffect(hasPermission, useFront) {
         if (!hasPermission) return@LaunchedEffect
@@ -145,6 +149,12 @@ fun CameraScreen(
             message?.let { Box(Modifier.padding(16.dp)) { Notice(it) } }
         }
 
+        Text(
+            "‹ Zurück", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.BottomStart).navigationBarsPadding().padding(24.dp)
+                .clip(RoundedCornerShape(3.dp)).background(Color(0x66000000)).clickable(onClick = onBack).padding(horizontal = 18.dp, vertical = 12.dp),
+        )
+
         val c = countdown
         if (c != null) {
             Text(
@@ -157,8 +167,8 @@ fun CameraScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    "START",
-                    color = Sonn.Navy, fontSize = 36.sp, fontWeight = FontWeight.Bold, letterSpacing = 6.sp,
+                    "Foto aufnehmen",
+                    color = Sonn.Navy, fontSize = 30.sp, fontWeight = FontWeight.Bold,
                     modifier = Modifier.clip(RoundedCornerShape(3.dp)).background(Sonn.LogoGold)
                         .padding(horizontal = 40.dp, vertical = 20.dp),
                 )

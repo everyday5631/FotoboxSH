@@ -7,9 +7,10 @@ Navy-Banner mit «SONNHALDE»-Wortmarke, Gold-Linien, Cream-Hintergrund.
 
 - **Setup-Modus:** Übersicht mit Status (WCMPlus, Upload, Banner, Timer) und grossem **START**. Dort *Einstellungen*:
   Banner-Text, Timer (3/5/10 s), Auto-Druck, Kamera, WCMPlus-/Drucker-/Upload-Adresse, PIN.
-- **Retail-Modus** (nach START, Kiosk/Vollbild): Live-Kamera → **START** tippen → Timer → Foto → Ergebnis mit
+- **Retail-Modus** (nach START, Kiosk/Vollbild): **Startbildschirm** (Hintergrundbild, Logo, Überschrift, «jetzt starten»;
+  Bild/Texte im Setup einstellbar) → Live-Kamera → «Foto aufnehmen» → Timer → Foto → Ergebnis mit
   **ZUM HERUNTERLADEN SCANNEN** (QR-Code), Anzahl Abzüge (1–3), **DRUCKEN**, **FERTIG**. Nach 90 s ohne Eingabe
-  zurück zum Start. Beenden: langer Druck auf den Banner, dann PIN. Nach einem Neustart der App geht es direkt im
+  zurück zum Start. Beenden: langer Druck auf das Logo (Startbildschirm) bzw. den Banner, dann PIN. Nach einem Neustart der App geht es direkt im
   Retail-Modus weiter.
 
 ## Foto-Banner
@@ -73,3 +74,9 @@ geheimen Schlüssel – nicht ins Repository einchecken.
 Vorab-Release **dev-build** direkt (ohne ZIP) bereit.
 
 Arial ist unter Android nicht vorhanden; es wird die System-Sans-Serif genutzt.
+
+## Installation / Updates
+
+Alle Builds sind mit demselben (nicht geheimen) Debug-Schlüssel signiert (`app/debug.keystore`), daher lässt sich ein
+neuer Build direkt über die installierte App installieren. Ältere Builds davor waren anders signiert: einmalig die
+alte App deinstallieren.

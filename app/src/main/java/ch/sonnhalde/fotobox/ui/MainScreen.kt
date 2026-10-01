@@ -2,6 +2,8 @@ package ch.sonnhalde.fotobox.ui
 
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -65,6 +67,9 @@ class Actions(
     val onGenerate: () -> Unit,
     val onDownload: () -> Unit,
     val onSplashDone: () -> Unit,
+    val onStartCapture: () -> Unit,
+    val onPickBackground: (Uri) -> Unit,
+    val onClearBackground: () -> Unit,
     val onPhotoCaptured: (File) -> Unit,
     val onCameraError: (String) -> Unit,
     val onRetryUpload: () -> Unit,
@@ -90,6 +95,10 @@ fun MainScreen(state: UiState, actions: Actions) {
         Screen.Splash -> SplashScreen(onDone = actions.onSplashDone)
         Screen.Overview -> OverviewScreen(state, actions)
         Screen.Settings -> SettingsScreen(state, actions)
+        Screen.Welcome -> {
+            val context = LocalContext.current
+            WelcomeScreen(state, File(context.filesDir, "start_bg.jpg"), onStart = actions.onStartCapture, onAdmin = { askPin = true })
+        }
         // Retail-Modus: langer Druck auf den Banner + PIN fuehrt zurueck ins Setup.
         Screen.Start -> CameraScreen(
             useFront = state.config.useFrontCamera,
@@ -98,6 +107,7 @@ fun MainScreen(state: UiState, actions: Actions) {
             onCaptured = actions.onPhotoCaptured,
             onFailure = actions.onCameraError,
             onAdmin = { askPin = true },
+            onBack = actions.onHome,
         )
         Screen.Result -> ResultScreen(state, actions, onAdmin = { askPin = true })
     }
@@ -197,6 +207,17 @@ private fun SettingsScreen(state: UiState, actions: Actions) {
                 Text("${cfg.bannerText.length}/${PhotoComposer.MAX_TEXT} Zeichen", color = Sonn.Stone, fontSize = 12.sp)
                 val preview = remember(cfg.bannerText) { PhotoComposer.preview(context, cfg.bannerText) }
                 Image(preview.asImageBitmap(), contentDescription = "Vorschau", modifier = Modifier.fillMaxWidth().border(1.dp, Sonn.Line, MaterialShape))
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SectionTitle("Retail-Modus", "Startbildschirm")
+                SonnField("Überschrift", cfg.startTitle, KeyboardType.Text, singleLine = false) { actions.onConfigQuiet(cfg.copy(startTitle = it.take(60))) }
+                SonnField("Text des Start-Knopfs", cfg.startButton, KeyboardType.Text) { actions.onConfigQuiet(cfg.copy(startButton = it.take(24))) }
+                val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> uri?.let(actions.onPickBackground) }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SonnButton("Hintergrundbild wählen", primary = false, onClick = { picker.launch("image/*") })
+                    SonnButton("Entfernen", primary = false, onClick = actions.onClearBackground)
+                }
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

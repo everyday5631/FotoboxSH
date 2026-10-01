@@ -21,6 +21,9 @@ data class WcmConfig(
     val bannerText: String = "",
     /** Countdown vor der Aufnahme in Sekunden. */
     val timerSeconds: Int = 3,
+    /** Ueberschrift und Knopf-Text auf dem Startbildschirm des Retail-Modus. */
+    val startTitle: String = "Ein Moment für Sie und Ihre Liebsten",
+    val startButton: String = "jetzt starten",
 ) {
     companion object {
         /** Standardadresse des WCMPlus-Portals (laut Anleitung 192.168.4.1). */
@@ -41,6 +44,8 @@ class WcmSettings(context: Context) {
         useFrontCamera = prefs.getBoolean("useFrontCamera", true),
         bannerText = prefs.getString("bannerText", "").orEmpty(),
         timerSeconds = prefs.getInt("timerSeconds", 3),
+        startTitle = prefs.getString("startTitle", WcmConfig().startTitle).orEmpty(),
+        startButton = prefs.getString("startButton", WcmConfig().startButton).orEmpty(),
     )
 
     fun save(config: WcmConfig) {
@@ -54,6 +59,8 @@ class WcmSettings(context: Context) {
             .putBoolean("useFrontCamera", config.useFrontCamera)
             .putString("bannerText", config.bannerText.take(28))
             .putInt("timerSeconds", config.timerSeconds)
+            .putString("startTitle", config.startTitle.take(60))
+            .putString("startButton", config.startButton.take(24))
             .apply()
     }
 }
