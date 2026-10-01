@@ -38,6 +38,11 @@ object Kiosk {
         return am.lockTaskModeState != ActivityManager.LOCK_TASK_MODE_NONE
     }
 
+    /** Kurzbeschreibung fuer die Uebersicht. */
+    fun statusText(c: Context) =
+        if (isDeviceOwner(c)) "Kiosk: Device Owner (volle Sperre)"
+        else "Kiosk: kein Device Owner – nur «Bildschirm fixieren» möglich"
+
     /** Vollbild + Bildschirm an; bei aktivem Kiosk zusaetzlich Lock-Task. */
     fun apply(activity: Activity) {
         val window = activity.window

@@ -51,6 +51,7 @@ import ch.sonnhalde.fotobox.UiState
 import ch.sonnhalde.fotobox.camera.CameraScreen
 import ch.sonnhalde.fotobox.photo.PhotoComposer
 import ch.sonnhalde.fotobox.MAX_COPIES
+import ch.sonnhalde.fotobox.kiosk.Kiosk
 import java.io.File
 import ch.sonnhalde.fotobox.wcm.WcmConfig
 import ch.sonnhalde.fotobox.wcm.WcmStatus
@@ -145,6 +146,8 @@ private fun OverviewScreen(state: UiState, actions: Actions) {
             StatusLine(dot, wcm)
             StatusLine(if (state.config.flowUrl.isBlank()) Sonn.Error else Sonn.Ok,
                 if (state.config.flowUrl.isBlank()) "SharePoint-Upload: nicht eingerichtet" else "SharePoint-Upload: eingerichtet")
+            val ctx = LocalContext.current
+            StatusLine(if (Kiosk.isDeviceOwner(ctx)) Sonn.Ok else Sonn.Stone, Kiosk.statusText(ctx))
             StatusLine(Sonn.Ok, "Banner: " + state.config.bannerText.ifBlank { "(kein Text)" })
             StatusLine(Sonn.Ok, "Timer: ${state.config.timerSeconds} s · Auto-Druck: " + if (state.config.autoPrint) "ein" else "aus")
 

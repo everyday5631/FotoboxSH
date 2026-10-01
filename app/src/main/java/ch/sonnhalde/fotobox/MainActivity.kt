@@ -64,6 +64,12 @@ class MainActivity : ComponentActivity() {
         Kiosk.setEnabled(this, true)
         Kiosk.apply(this)
         vm.startRetail()
+        // Ohne Device Owner ignoriert Android startLockTask(), wenn «Bildschirm fixieren» ausgeschaltet ist.
+        window.decorView.postDelayed({
+            if (Kiosk.isEnabled(this) && !Kiosk.isLocked(this)) {
+                vm.showError("Kiosk-Sperre nicht aktiv: in den Android-Einstellungen «Bildschirm fixieren» einschalten (oder App als Device Owner einrichten).")
+            }
+        }, 2000)
     }
 
     /** PIN pruefen; bei Erfolg Kiosk loesen und zur Uebersicht (Setup-Modus). */
