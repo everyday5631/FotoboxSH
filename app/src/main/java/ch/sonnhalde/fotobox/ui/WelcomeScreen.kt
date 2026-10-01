@@ -38,6 +38,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ch.sonnhalde.fotobox.AppVersion
 import ch.sonnhalde.fotobox.R
 import ch.sonnhalde.fotobox.UiState
 import kotlinx.coroutines.Dispatchers
@@ -100,6 +101,11 @@ fun WelcomeScreen(state: UiState, bgFile: File, onStart: () -> Unit, onAdmin: ()
                 Text("👆", fontSize = 26.sp)
             }
         }
+
+        Text(
+            AppVersion.label, color = Color(0x99FFFFFF), fontSize = 11.sp,
+            modifier = Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(16.dp),
+        )
 
         state.message?.let { Box(Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(24.dp).width(360.dp)) { Notice(it) } }
     }

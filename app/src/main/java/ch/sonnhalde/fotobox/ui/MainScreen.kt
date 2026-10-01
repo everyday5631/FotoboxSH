@@ -52,6 +52,7 @@ import ch.sonnhalde.fotobox.Screen
 import ch.sonnhalde.fotobox.UiState
 import ch.sonnhalde.fotobox.camera.CameraScreen
 import ch.sonnhalde.fotobox.photo.PhotoComposer
+import ch.sonnhalde.fotobox.AppVersion
 import ch.sonnhalde.fotobox.MAX_COPIES
 import ch.sonnhalde.fotobox.kiosk.Kiosk
 import java.io.File
@@ -172,6 +173,7 @@ private fun OverviewScreen(state: UiState, actions: Actions) {
                 color = Sonn.Stone, fontSize = 13.sp,
             )
             SonnButton("Einstellungen", primary = false, onClick = actions.onOpenSettings)
+            Text(AppVersion.label, color = Sonn.Stone, fontSize = 12.sp)
         }
     }
 }

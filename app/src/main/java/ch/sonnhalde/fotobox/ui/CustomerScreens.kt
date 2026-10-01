@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ch.sonnhalde.fotobox.AppVersion
 import ch.sonnhalde.fotobox.PrintState
 import ch.sonnhalde.fotobox.UiState
 import ch.sonnhalde.fotobox.UploadState
@@ -61,6 +62,10 @@ fun SplashScreen(onDone: () -> Unit) {
             Text("SONNHALDE", color = Sonn.Cream, fontSize = 32.sp, fontWeight = FontWeight.Bold, letterSpacing = 6.sp)
             Text("FOTOBOX", color = Sonn.LogoGold, fontSize = 16.sp, fontWeight = FontWeight.Bold, letterSpacing = 4.sp)
         }
+        Text(
+            AppVersion.label, color = Sonn.BannerMuted, fontSize = 14.sp,
+            modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(24.dp),
+        )
     }
 }
 

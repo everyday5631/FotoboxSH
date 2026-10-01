@@ -69,7 +69,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val settings = WcmSettings(app)
     private val client = WcmClient()
     private val uploader = SharePointUploader()
-    private val printer = IppPrinter()
+    private val printer = IppPrinter(app)
     private var photoJpeg: ByteArray? = null
 
     private val _state = MutableStateFlow(UiState(config = settings.load(), retail = Kiosk.isEnabled(app)))

@@ -3,6 +3,10 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// Version aus der CI: Build-Nummer (GitHub-Lauf) und Commit; lokal ohne CI = 1 / «lokal».
+val runNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
+val gitSha = System.getenv("GITHUB_SHA")?.take(7) ?: "lokal"
+
 android {
     namespace = "ch.sonnhalde.fotobox"
     compileSdk = 34
@@ -12,8 +16,9 @@ android {
         // API 29+: Dateien koennen ohne Speicher-Berechtigung per MediaStore in "Downloads" gespeichert werden.
         minSdk = 29
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = runNumber
+        versionName = "0.1.$runNumber"
+        buildConfigField("String", "GIT_SHA", "\"$gitSha\"")
     }
 
     // Fester Debug-Schluessel (nicht geheim): jeder CI-Build ist gleich signiert, daher laesst sich ein
@@ -41,6 +46,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.14"

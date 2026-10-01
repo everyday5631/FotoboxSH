@@ -1,6 +1,14 @@
 package ch.sonnhalde.fotobox.print
 
+import android.content.Context
+import android.net.nsd.NsdManager
+import android.net.nsd.NsdServiceInfo
 import ch.sonnhalde.fotobox.wcm.WcmConfig
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
+import java.net.Inet4Address
+import kotlin.coroutines.resume
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -18,6 +26,7 @@ import java.util.concurrent.TimeUnit
  * Adresse verwendet oder eine Liste ueblicher Pfade durchprobiert; der erste Treffer wird gemerkt.
  */
 class IppPrinter(
+    private val context: Context,
     private val http: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(5, TimeUnit.SECONDS)
         .readTimeout(90, TimeUnit.SECONDS)
@@ -67,6 +76,7 @@ class IppPrinter(
             if (resp != null && resp.ok) return Result.success(if (copies > 1) "$copies Abzüge an den Drucker gesendet." else "Foto an den Drucker gesendet.")
             lastError = resp?.statusText() ?: result.exceptionOrNull()?.message ?: lastError
         }
+        cached = null // Adresse neu suchen, falls sich der Drucker bewegt hat
         return Result.failure(IllegalStateException("Drucker hat den Auftrag abgelehnt ($lastError)"))
     }
 
@@ -79,10 +89,51 @@ class IppPrinter(
         }
     }
 
-    private fun candidates(config: WcmConfig): List<String> {
+    /**
+     * Wie Mopria: Drucker per mDNS/Bonjour (_ipp._tcp) im WLAN suchen. Das liefert die echte Adresse inkl. Pfad,
+     * auch wenn WCMPlus nicht unter 192.168.4.1 erreichbar ist (z. B. wenn es im lokalen WLAN haengt).
+     */
+    private suspend fun discoverMdns(): List<String> {
+        val nsd = context.getSystemService(Context.NSD_SERVICE) as NsdManager
+        val found = java.util.concurrent.CopyOnWriteArrayList<NsdServiceInfo>()
+        val listener = object : NsdManager.DiscoveryListener {
+            override fun onDiscoveryStarted(serviceType: String) {}
+            override fun onServiceFound(service: NsdServiceInfo) { found += service }
+            override fun onServiceLost(service: NsdServiceInfo) {}
+            override fun onDiscoveryStopped(serviceType: String) {}
+            override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {}
+            override fun onStopDiscoveryFailed(serviceType: String, errorCode: Int) {}
+        }
+        if (runCatching { nsd.discoverServices("_ipp._tcp", NsdManager.PROTOCOL_DNS_SD, listener) }.isFailure) return emptyList()
+        delay(3000)
+        runCatching { nsd.stopServiceDiscovery(listener) }
+        val result = mutableListOf<String>()
+        // QW410/DNP/WCM zuerst; Aufloesungen nacheinander (Android erlaubt nur eine gleichzeitig).
+        val ordered = found.sortedByDescending { it.serviceName.contains("QW410", true) || it.serviceName.contains("DNP", true) || it.serviceName.contains("WCM", true) }
+        for (service in ordered.take(5)) resolve(nsd, service)?.let { result += it }
+        return result
+    }
+
+    @Suppress("DEPRECATION")
+    private suspend fun resolve(nsd: NsdManager, service: NsdServiceInfo): String? =
+        withTimeoutOrNull(2500) {
+            suspendCancellableCoroutine { cont ->
+                nsd.resolveService(service, object : NsdManager.ResolveListener {
+                    override fun onResolveFailed(info: NsdServiceInfo, errorCode: Int) { if (cont.isActive) cont.resume(null) }
+                    override fun onServiceResolved(info: NsdServiceInfo) {
+                        val host = (info.host as? Inet4Address)?.hostAddress
+                        val rp = info.attributes["rp"]?.let { String(it) }.orEmpty().trim('/')
+                        if (cont.isActive) cont.resume(host?.let { "ipp://$it:${info.port}/$rp" })
+                    }
+                })
+            }
+        }
+
+    private suspend fun candidates(config: WcmConfig): List<String> {
         if (config.printerUri.isNotBlank()) return listOf(config.printerUri.trim())
-        val host = runCatching { URI(config.baseUrl.trim()).host }.getOrNull() ?: return emptyList()
-        return listOf("/ipp/print", "/printers/QW410-4x6", "/printers/dnpimage", "/printers/QW410", "/ipp", "/")
+        val mdns = discoverMdns()
+        val host = runCatching { URI(config.baseUrl.trim()).host }.getOrNull() ?: return mdns
+        return mdns + listOf("/ipp/print", "/printers/QW410-4x6", "/printers/dnpimage", "/printers/QW410", "/ipp", "/")
             .map { "ipp://$host:631$it" }
     }
 
