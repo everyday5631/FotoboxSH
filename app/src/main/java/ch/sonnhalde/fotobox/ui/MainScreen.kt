@@ -85,6 +85,7 @@ class Actions(
     val onExitApp: () -> Unit,
     val onOpenWifi: () -> Unit,
     val onTestPrint: () -> Unit,
+    val onTestUpload: () -> Unit,
     val onRetryQueue: () -> Unit,
     val onClearQueue: () -> Unit,
     val onSetPin: (String) -> Unit,
@@ -208,7 +209,6 @@ internal fun ConnectionSection(state: UiState, onConfigChange: (WcmConfig) -> Un
                 SonnField("Adresse von WCMPlus", draft.baseUrl, KeyboardType.Uri) { draft = draft.copy(baseUrl = it) }
                 SonnField("Pfad für Verbindungstest", draft.statusPath, KeyboardType.Uri) { draft = draft.copy(statusPath = it) }
                 SonnField("Token (optional)", draft.token, KeyboardType.Password) { draft = draft.copy(token = it) }
-                SonnField("Upload-Link (Power-Automate-Flow für SharePoint)", draft.flowUrl, KeyboardType.Uri) { draft = draft.copy(flowUrl = it) }
                 SonnField("Drucker-Adresse IPP (leer = automatisch)", draft.printerUri, KeyboardType.Uri) { draft = draft.copy(printerUri = it) }
                 SonnButton("Speichern", primary = true, onClick = { onConfigChange(draft); editing = false })
             }

@@ -12,6 +12,7 @@ import ch.sonnhalde.fotobox.kiosk.Kiosk
 import ch.sonnhalde.fotobox.photo.PhotoComposer
 import ch.sonnhalde.fotobox.print.IppPrinter
 import ch.sonnhalde.fotobox.qr.QrCode
+import ch.sonnhalde.fotobox.upload.NextcloudUploader
 import ch.sonnhalde.fotobox.upload.SharePointUploader
 import ch.sonnhalde.fotobox.upload.UploadQueue
 import ch.sonnhalde.fotobox.wcm.WcmClient
@@ -74,8 +75,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val settings = WcmSettings(app)
     private val client = WcmClient()
     private val uploader = SharePointUploader()
+    private val nextcloud = NextcloudUploader()
     private val queue = UploadQueue(app)
     private val printer = IppPrinter(app)
+    /** Gemeinsamer Einstieg fuer beide Upload-Ziele. */
+    private suspend fun uploadTo(config: WcmConfig, name: String, jpeg: ByteArray): Result<String> =
+        if (config.uploadTarget == "nextcloud") nextcloud.upload(config, name, jpeg) else uploader.upload(config.flowUrl, name, jpeg)
+
+    private fun uploadConfigured(c: WcmConfig) =
+        if (c.uploadTarget == "nextcloud") c.ncUrl.isNotBlank() && c.ncUser.isNotBlank() && c.ncPassword.isNotBlank() else c.flowUrl.isNotBlank()
+
     private var photoJpeg: ByteArray? = null
     private var digitalJpeg: ByteArray? = null
 
@@ -210,14 +219,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun uploadPhoto() {
         val jpeg = digitalJpeg ?: return
-        val flowUrl = _state.value.config.flowUrl
-        if (flowUrl.isBlank()) {
-            _state.update { it.copy(upload = UploadState.Failed("Kein Upload-Link eingestellt (Einstellungen).")) }
+        val config = _state.value.config
+        if (!uploadConfigured(config)) {
+            _state.update { it.copy(upload = UploadState.Failed("Upload ist nicht eingerichtet (Setup → Konfiguration).")) }
             return
         }
         _state.update { it.copy(upload = UploadState.Uploading) }
         viewModelScope.launch {
-            val result = uploader.upload(flowUrl, "foto-${System.currentTimeMillis()}.jpg", jpeg)
+            val result = uploadTo(config, "foto-${System.currentTimeMillis()}.jpg", jpeg)
             result.fold(
                 onSuccess = { url ->
                     val qr = withContext(Dispatchers.Default) { QrCode.generate(url) }
@@ -237,10 +246,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** Direktdruck per IPP; bei Fehler zeigt die Oberflaeche den Android-Druckdialog als Ausweg an. */
     fun printPhoto() {
         val jpeg = photoJpeg ?: return
-        val landscape = (_state.value.photo?.let { it.width >= it.height }) ?: true
+        val bmp = _state.value.photo ?: return
         _state.update { it.copy(print = PrintState.Printing) }
         viewModelScope.launch {
-            val result = printer.printJpeg(_state.value.config, jpeg, landscape, _state.value.copies)
+            val (bytes, landscape) = withContext(Dispatchers.Default) { encodeForPrint(bmp, _state.value.config.printRotation, jpeg) }
+            val result = printer.printJpeg(_state.value.config, bytes, landscape, _state.value.copies)
             _state.update {
                 it.copy(print = result.fold(
                     onSuccess = { text -> PrintState.Done(text) },
@@ -265,18 +275,41 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Upload-Test mit Platzhalterfoto; zeigt den erzeugten Link oder den Fehler. */
+    fun testUpload() {
+        val config = _state.value.config
+        if (!uploadConfigured(config)) { _state.update { it.copy(message = "Upload ist nicht eingerichtet.") }; return }
+        _state.update { it.copy(message = "Upload-Test läuft …") }
+        viewModelScope.launch {
+            val jpeg = withContext(Dispatchers.Default) {
+                val bmp = PhotoComposer.composeDigital(PhotoComposer.preview(getApplication(), ""), config.bannerText.ifBlank { "Test" }, 900)
+                ByteArrayOutputStream().also { bmp.compress(Bitmap.CompressFormat.JPEG, 90, it) }.toByteArray()
+            }
+            val result = uploadTo(config, "test-${System.currentTimeMillis()}.jpg", jpeg)
+            _state.update { it.copy(message = result.fold({ url -> "Upload OK: $url" }, { e -> "Upload fehlgeschlagen: ${e.message}" })) }
+        }
+    }
+
+    /** Druck-Bild nach Einstellung drehen und als JPEG kodieren; zweiter Wert: Querformat? */
+    private fun encodeForPrint(bmp: Bitmap, rotation: Int, original: ByteArray?): Pair<ByteArray, Boolean> {
+        if (rotation % 360 == 0 && original != null) return original to (bmp.width >= bmp.height)
+        val rotated = if (rotation % 360 == 0) bmp else Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, Matrix().apply { postRotate(rotation.toFloat()) }, true)
+        val jpeg = ByteArrayOutputStream().also { rotated.compress(Bitmap.CompressFormat.JPEG, 92, it) }.toByteArray()
+        return jpeg to (rotated.width >= rotated.height)
+    }
+
     // ---- Upload-Warteschlange ----
 
     fun refreshQueue() = _state.update { it.copy(queueCount = queue.count()) }
 
     fun retryQueue() {
-        val flowUrl = _state.value.config.flowUrl
-        if (flowUrl.isBlank()) { _state.update { it.copy(message = "Kein Upload-Link eingestellt.") }; return }
+        val config = _state.value.config
+        if (!uploadConfigured(config)) { _state.update { it.copy(message = "Upload ist nicht eingerichtet.") }; return }
         viewModelScope.launch {
             val files = queue.files()
             var sent = 0
             for (f in files) {
-                val ok = uploader.upload(flowUrl, f.name, f.readBytes()).isSuccess
+                val ok = uploadTo(config, f.name, f.readBytes()).isSuccess
                 if (!ok) break
                 f.delete(); sent++
             }
@@ -293,11 +326,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun testPrint() {
         _state.update { it.copy(printerTest = "Testdruck wird gesendet …") }
         viewModelScope.launch {
-            val jpeg = withContext(Dispatchers.Default) {
-                val bmp = PhotoComposer.preview(getApplication(), _state.value.config.bannerText.ifBlank { "Testdruck" })
-                ByteArrayOutputStream().also { bmp.compress(Bitmap.CompressFormat.JPEG, 92, it) }.toByteArray()
+            val (jpeg, landscape) = withContext(Dispatchers.Default) {
+                val bmp = PhotoComposer.preview(getApplication(), _state.value.config.bannerText.ifBlank { "Testdruck" }, width = 1800)
+                encodeForPrint(bmp, _state.value.config.printRotation, null)
             }
-            val result = printer.printJpeg(_state.value.config, jpeg, landscape = true, copies = 1)
+            val result = printer.printJpeg(_state.value.config, jpeg, landscape, copies = 1)
             _state.update { it.copy(printerTest = result.fold({ it }, { e -> e.message ?: "Testdruck fehlgeschlagen" })) }
         }
     }

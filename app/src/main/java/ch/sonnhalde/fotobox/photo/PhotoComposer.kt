@@ -93,8 +93,8 @@ object PhotoComposer {
     }
 
     /** Kleine Vorschau fuer die Einstellungen (Platzhalterfoto). */
-    fun preview(context: Context, bannerText: String): Bitmap {
-        val w = 900
+    fun preview(context: Context, bannerText: String, width: Int = 900): Bitmap {
+        val w = width
         val placeholder = Bitmap.createBitmap(w, w * 2 / 3, Bitmap.Config.ARGB_8888).apply {
             Canvas(this).drawColor(Color.parseColor("#6E7F8F"))
         }

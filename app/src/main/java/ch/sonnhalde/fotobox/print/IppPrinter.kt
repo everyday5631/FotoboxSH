@@ -61,10 +61,19 @@ class IppPrinter(
         if (formats.isNotEmpty() && "image/jpeg" !in formats) {
             return Result.failure(IllegalStateException("Drucker nimmt kein JPEG an (unterstützt: ${formats.joinToString()})"))
         }
-        val media = printer.info.attrs["media-supported"].orEmpty().firstOrNull { it.contains("4x6") }
+        val media = config.printMedia.trim().ifBlank {
+            printer.info.attrs["media-supported"].orEmpty().firstOrNull { it.contains("4x6") }
+        }
+        val scaling = config.printScaling.takeIf { it == "fit" || it == "fill" }
+        val orientation = when (config.printOrientation) {
+            "landscape" -> 4
+            "portrait" -> 3
+            "none" -> null
+            else -> if (landscape) 4 else 3
+        }
         // Vom genauesten zum einfachsten Auftrag; manche Drucker lehnen einzelne Attribute ab.
         val attempts = listOf(
-            Ipp.JobOptions(media, scalingFill = true, landscape = landscape, copies = copies),
+            Ipp.JobOptions(media, scaling, orientation, copies),
             Ipp.JobOptions(media, copies = copies),
             Ipp.JobOptions(copies = copies),
         ).distinct()

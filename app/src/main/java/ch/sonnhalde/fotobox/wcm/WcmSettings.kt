@@ -25,6 +25,17 @@ data class WcmConfig(
     /** Kamera: Belichtungskorrektur (Index) und Zoom, wie bei UpReach «Camera settings». */
     val exposureIndex: Int = 0,
     val zoomRatio: Float = 1f,
+    /** Druckformat: IPP-Papiername (leer = automatisch «4x6»), Skalierung, Ausrichtung und Drehung des Bildes. */
+    val printMedia: String = "",
+    val printScaling: String = "fit",      // fit | fill | auto (Drucker entscheidet)
+    val printOrientation: String = "auto", // auto | landscape | portrait | none
+    val printRotation: Int = 0,            // 0 | 90 | 180 | 270 Grad vor dem Senden
+    /** Upload-Ziel: «flow» (Power Automate/SharePoint) oder «nextcloud». */
+    val uploadTarget: String = "flow",
+    val ncUrl: String = "",
+    val ncUser: String = "",
+    val ncPassword: String = "",
+    val ncFolder: String = "Fotobox",
     val startTitle: String = "Ein Moment für Sie und Ihre Liebsten",
     val startButton: String = "jetzt starten",
 ) {
@@ -49,6 +60,15 @@ class WcmSettings(context: Context) {
         timerSeconds = prefs.getInt("timerSeconds", 3),
         exposureIndex = prefs.getInt("exposureIndex", 0),
         zoomRatio = prefs.getFloat("zoomRatio", 1f),
+        printMedia = prefs.getString("printMedia", "").orEmpty(),
+        printScaling = prefs.getString("printScaling", "fit").orEmpty(),
+        printOrientation = prefs.getString("printOrientation", "auto").orEmpty(),
+        printRotation = prefs.getInt("printRotation", 0),
+        uploadTarget = prefs.getString("uploadTarget", "flow").orEmpty(),
+        ncUrl = prefs.getString("ncUrl", "").orEmpty(),
+        ncUser = prefs.getString("ncUser", "").orEmpty(),
+        ncPassword = prefs.getString("ncPassword", "").orEmpty(),
+        ncFolder = prefs.getString("ncFolder", "Fotobox").orEmpty(),
         startTitle = prefs.getString("startTitle", WcmConfig().startTitle).orEmpty(),
         startButton = prefs.getString("startButton", WcmConfig().startButton).orEmpty(),
     )
@@ -66,6 +86,15 @@ class WcmSettings(context: Context) {
             .putInt("timerSeconds", config.timerSeconds)
             .putInt("exposureIndex", config.exposureIndex)
             .putFloat("zoomRatio", config.zoomRatio)
+            .putString("printMedia", config.printMedia.trim())
+            .putString("printScaling", config.printScaling)
+            .putString("printOrientation", config.printOrientation)
+            .putInt("printRotation", config.printRotation)
+            .putString("uploadTarget", config.uploadTarget)
+            .putString("ncUrl", config.ncUrl.trim())
+            .putString("ncUser", config.ncUser.trim())
+            .putString("ncPassword", config.ncPassword)
+            .putString("ncFolder", config.ncFolder.trim().trim('/'))
             .putString("startTitle", config.startTitle.take(60))
             .putString("startButton", config.startButton.take(24))
             .apply()

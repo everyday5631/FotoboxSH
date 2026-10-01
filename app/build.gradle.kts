@@ -5,7 +5,7 @@ plugins {
 
 // Version aus der CI: Build-Nummer (GitHub-Lauf) und Commit; lokal ohne CI = 1 / «lokal».
 val runNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
-val gitSha = System.getenv("GITHUB_SHA")?.take(7) ?: "lokal"
+val gitSha = (System.getenv("APP_SHA") ?: System.getenv("GITHUB_SHA"))?.take(7) ?: "lokal"
 
 android {
     namespace = "ch.sonnhalde.fotobox"

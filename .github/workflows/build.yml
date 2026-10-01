@@ -18,6 +18,9 @@ jobs:
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
       - run: ./gradlew assembleDebug
+        env:
+          # Bei Pull-Requests ist GITHUB_SHA ein automatischer Merge-Commit; der echte Commit steht im Head.
+          APP_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: APK pruefen (Signatur, Paketname, Mindest-Android)
         run: |

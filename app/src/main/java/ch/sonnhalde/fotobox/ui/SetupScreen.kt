@@ -105,8 +105,7 @@ fun SetupScreen(state: UiState, actions: Actions) {
                 }
                 SetupTab.Printer -> {
                     ConnectionSection(state, actions.onConfigChange, actions.onCheckConnection, actions.onTestPrinter)
-                    SonnButton("Testdruck (Foto mit Banner)", primary = false, onClick = actions.onTestPrint)
-                    Text("Kunden können bis zu $MAX_COPIES Abzüge drucken.", color = Sonn.Stone, fontSize = 13.sp)
+                    PrintFormatSection(state, actions)
                 }
                 SetupTab.Queue -> {
                     SectionTitle("SharePoint", "Upload-Warteschlange")
@@ -147,6 +146,59 @@ fun SetupScreen(state: UiState, actions: Actions) {
 }
 
 @Composable
+private fun <T> ChoiceRow(label: String, options: List<Pair<String, T>>, selected: T, onSelect: (T) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(label, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            for ((text, value) in options) SonnButton(text, primary = value == selected, onClick = { onSelect(value) })
+        }
+    }
+}
+
+/** Druckformat wie im Android-Dialog: Papier, Skalierung, Ausrichtung, Drehung; mit Testdruck zum Ausprobieren. */
+@Composable
+private fun PrintFormatSection(state: UiState, actions: Actions) {
+    val cfg = state.config
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionTitle("Drucker", "Druckformat")
+        SonnField("Papierformat (IPP-Name, leer = automatisch 4x6)", cfg.printMedia, KeyboardType.Text) { actions.onConfigQuiet(cfg.copy(printMedia = it)) }
+        Text("Verfügbare Namen zeigt «Drucker testen» unter «media-supported».", color = Sonn.Stone, fontSize = 12.sp)
+        ChoiceRow("Skalierung", listOf("Einpassen" to "fit", "Füllen (zuschneiden)" to "fill", "Drucker entscheidet" to "auto"), cfg.printScaling) {
+            actions.onConfigQuiet(cfg.copy(printScaling = it))
+        }
+        ChoiceRow("Ausrichtung", listOf("Automatisch" to "auto", "Quer" to "landscape", "Hoch" to "portrait", "Nicht senden" to "none"), cfg.printOrientation) {
+            actions.onConfigQuiet(cfg.copy(printOrientation = it))
+        }
+        ChoiceRow("Bild drehen", listOf("0°" to 0, "90°" to 90, "180°" to 180, "270°" to 270), cfg.printRotation) {
+            actions.onConfigQuiet(cfg.copy(printRotation = it))
+        }
+        SonnButton("Testdruck (Foto mit Banner)", primary = true, onClick = actions.onTestPrint)
+        Text("Kunden können bis zu $MAX_COPIES Abzüge drucken.", color = Sonn.Stone, fontSize = 13.sp)
+    }
+}
+
+/** Upload-Ziel: Power Automate (SharePoint) oder Nextcloud. */
+@Composable
+private fun UploadSection(state: UiState, actions: Actions) {
+    val cfg = state.config
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionTitle("Download", "Upload-Ziel für QR-Code")
+        ChoiceRow("Ziel", listOf("SharePoint (Power Automate)" to "flow", "Nextcloud" to "nextcloud"), cfg.uploadTarget) {
+            actions.onConfigQuiet(cfg.copy(uploadTarget = it))
+        }
+        if (cfg.uploadTarget == "nextcloud") {
+            SonnField("Nextcloud-Adresse (https://…)", cfg.ncUrl, KeyboardType.Uri) { actions.onConfigQuiet(cfg.copy(ncUrl = it)) }
+            SonnField("Benutzername", cfg.ncUser, KeyboardType.Text) { actions.onConfigQuiet(cfg.copy(ncUser = it)) }
+            SonnField("App-Passwort", cfg.ncPassword, KeyboardType.Password) { actions.onConfigQuiet(cfg.copy(ncPassword = it)) }
+            SonnField("Ordner (wird angelegt)", cfg.ncFolder, KeyboardType.Text) { actions.onConfigQuiet(cfg.copy(ncFolder = it)) }
+        } else {
+            SonnField("Upload-Link (Power-Automate-Flow)", cfg.flowUrl, KeyboardType.Uri) { actions.onConfigQuiet(cfg.copy(flowUrl = it)) }
+        }
+        SonnButton("Upload testen", primary = false, onClick = actions.onTestUpload)
+    }
+}
+
+@Composable
 private fun ConfigTab(state: UiState, actions: Actions) {
     val context = LocalContext.current
     val cfg = state.config
@@ -183,6 +235,8 @@ private fun ConfigTab(state: UiState, actions: Actions) {
         }
         SettingSwitch("Foto automatisch drucken (1 Abzug)", cfg.autoPrint) { actions.onConfigQuiet(cfg.copy(autoPrint = it)) }
     }
+
+    UploadSection(state, actions)
 
     QrSection(state, actions.onQrInput, actions.onGenerate, actions.onDownload)
 

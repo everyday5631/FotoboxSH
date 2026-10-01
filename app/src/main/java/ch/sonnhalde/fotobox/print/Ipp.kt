@@ -23,8 +23,10 @@ object Ipp {
     /** Eine Variante der Job-Attribute; null-Felder werden weggelassen. */
     data class JobOptions(
         val media: String? = null,
-        val scalingFill: Boolean = false,
-        val landscape: Boolean = false,
+        /** print-scaling: «fit», «fill» oder null (Drucker-Standard). */
+        val scaling: String? = null,
+        /** orientation-requested: 3 = hoch, 4 = quer, null = nicht senden. */
+        val orientation: Int? = null,
         val copies: Int = 1,
     )
 
@@ -47,8 +49,8 @@ object Ipp {
         w.u8(0x02)
         w.int(0x21, "copies", options.copies)
         options.media?.let { w.str(0x44, "media", it) }
-        if (options.scalingFill) w.str(0x44, "print-scaling", "fill")
-        if (options.landscape) w.int(0x23, "orientation-requested", 4)
+        options.scaling?.let { w.str(0x44, "print-scaling", it) }
+        options.orientation?.let { w.int(0x23, "orientation-requested", it) }
         w.u8(0x03)
         w.out.write(data)
         return w.out.toByteArray()

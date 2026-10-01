@@ -14,6 +14,10 @@ Navy-Banner mit «SONNHALDE»-Wortmarke, Gold-Linien, Cream-Hintergrund.
   zurück zum Start. Beenden: langer Druck auf das Logo (Startbildschirm) bzw. den Banner, dann PIN. Nach einem Neustart der App geht es direkt im
   Retail-Modus weiter.
 
+## Upload-Ziel
+
+Wählbar im Setup: **SharePoint** über Power Automate (siehe unten) oder **Nextcloud** ([docs/nextcloud.md](docs/nextcloud.md)).
+
 ## SharePoint-Flow
 
 Anleitung und Testskript: [docs/power-automate-flow.md](docs/power-automate-flow.md), `tools/test-flow.sh`.
