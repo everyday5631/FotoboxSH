@@ -56,6 +56,14 @@ Die App startet im Vollbild, sperrt die Zurück-Taste und hält den Bildschirm a
 **Verwaltung:** langer Druck auf den Banner → PIN (Standard `1234`, bitte ändern). Dort: Einstellungen, QR aus Link,
 Drucker testen, Kiosk beenden/starten. Gäste sehen nur «Foto aufnehmen».
 
+## Drucker-WLAN automatisch (Tablet im Gast-WLAN)
+
+Sieht das Tablet im Internet-WLAN den Drucker nicht (Client-Isolation im Gast-WLAN), kann die App zum Drucken **kurz
+ins WLAN des Druckers wechseln** und danach zurück: *Setup → Drucker → Drucker-WLAN automatisch* (Name `WCMPLUS-…`,
+Passwort `dnp12345`, Adresse `192.168.4.1`). Ablauf pro Foto: Upload + QR-Code im Internet-WLAN → «Drucken» → Verbinden mit
+Drucker-WLAN → Druck → Android verbindet zurück. Technik: `WifiNetworkSpecifier` (ab Android 10); Android fragt beim ersten
+Mal um Erlaubnis. Der Wechsel dauert einige Sekunden und trennt das Internet kurz.
+
 ## Drucken
 
 «Drucken» sendet das Foto per **IPP direkt** an den QW410 (kein Android-Dialog). Die genaue IPP-Adresse ist nicht

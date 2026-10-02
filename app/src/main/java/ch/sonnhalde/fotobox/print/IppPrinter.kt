@@ -30,6 +30,8 @@ import java.util.concurrent.TimeUnit
  */
 class IppPrinter(
     private val context: Context,
+    /** false im Drucker-WLAN: kein mDNS, feste Adresse des WCMPlus (printerWifiHost). */
+    private val useMdns: Boolean = true,
     private val http: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(5, TimeUnit.SECONDS)
         .readTimeout(90, TimeUnit.SECONDS)
@@ -180,9 +182,9 @@ class IppPrinter(
 
     private suspend fun candidates(config: WcmConfig): List<String> {
         if (config.printerUri.isNotBlank()) return listOf(config.printerUri.trim())
-        val mdns = discoverMdns()
-        val host = runCatching { URI(config.baseUrl.trim()).host }.getOrNull() ?: return mdns
-        return mdns + listOf("/ipp/print", "/printers/QW410-4x6", "/printers/dnpimage", "/printers/QW410", "/ipp", "/")
+        val mdns = if (useMdns) discoverMdns() else emptyList()
+        val host = (if (useMdns) runCatching { URI(config.baseUrl.trim()).host }.getOrNull() else config.printerWifiHost.trim().ifBlank { null }) ?: return mdns
+        return mdns + listOf("/printers/QW410-4x6", "/printers/QW410-4x4", "/ipp/print", "/printers/dnpimage", "/printers/QW410", "/ipp", "/")
             .map { "ipp://$host:631$it" }
     }
 

@@ -11,6 +11,9 @@ import androidx.lifecycle.viewModelScope
 import ch.sonnhalde.fotobox.kiosk.Kiosk
 import ch.sonnhalde.fotobox.photo.PhotoComposer
 import ch.sonnhalde.fotobox.print.IppPrinter
+import ch.sonnhalde.fotobox.print.PrinterNetwork
+import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 import ch.sonnhalde.fotobox.qr.QrCode
 import ch.sonnhalde.fotobox.upload.NextcloudUploader
 import ch.sonnhalde.fotobox.upload.SharePointUploader
@@ -20,9 +23,11 @@ import ch.sonnhalde.fotobox.wcm.WcmConfig
 import ch.sonnhalde.fotobox.wcm.WcmSettings
 import ch.sonnhalde.fotobox.wcm.WcmStatus
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -41,7 +46,8 @@ sealed interface UploadState {
 
 sealed interface PrintState {
     data object Idle : PrintState
-    data object Printing : PrintState
+    /** stage: aktueller Schritt, z. B. «Verbinde mit Drucker-WLAN …». */
+    data class Printing(val stage: String = "Foto wird gedruckt …") : PrintState
     data class Done(val text: String) : PrintState
     data class Failed(val reason: String) : PrintState
 }
@@ -83,6 +89,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val nextcloud = NextcloudUploader()
     private val queue = UploadQueue(app)
     private val printer = IppPrinter(app)
+    private val printerNetwork = PrinterNetwork(app)
     /** Gemeinsamer Einstieg fuer beide Upload-Ziele. */
     private suspend fun uploadTo(config: WcmConfig, name: String, jpeg: ByteArray): Result<String> =
         if (config.uploadTarget == "nextcloud") nextcloud.upload(config, name, jpeg) else uploader.upload(config.flowUrl, name, jpeg)
@@ -214,23 +221,28 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     _state.update {
                         it.copy(screen = Screen.Result, photo = bmp, digital = digital, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, savedUri = null, message = null)
                     }
-                    uploadPhoto()
-                    if (_state.value.config.autoPrint) printPhoto()
+                    val upload = startUpload()
+                    // Beim Wechsel ins Drucker-WLAN zuerst hochladen (braucht Internet), dann drucken.
+                    if (_state.value.config.autoPrint) {
+                        viewModelScope.launch { if (printerWifiActive()) upload?.join(); printPhoto() }
+                    }
                 },
                 onFailure = { e -> showError("Foto konnte nicht verarbeitet werden: ${e.message}") },
             )
         }
     }
 
-    fun uploadPhoto() {
-        val jpeg = digitalJpeg ?: return
+    fun uploadPhoto() { startUpload() }
+
+    private fun startUpload(): Job? {
+        val jpeg = digitalJpeg ?: return null
         val config = _state.value.config
         if (!uploadConfigured(config)) {
             _state.update { it.copy(upload = UploadState.Failed("Upload ist nicht eingerichtet (Setup → Konfiguration).")) }
-            return
+            return null
         }
         _state.update { it.copy(upload = UploadState.Uploading) }
-        viewModelScope.launch {
+        return viewModelScope.launch {
             val result = uploadTo(config, "foto-${System.currentTimeMillis()}.jpg", jpeg)
             result.fold(
                 onSuccess = { url ->
@@ -249,19 +261,65 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Direktdruck per IPP; bei Fehler zeigt die Oberflaeche den Android-Druckdialog als Ausweg an. */
+    private fun printerWifiActive(c: WcmConfig = _state.value.config) = c.printerWifiSwitch && c.printerWifiSsid.isNotBlank()
+
+    /** Verbindet voruebergehend mit dem Drucker-WLAN, druckt und gibt es wieder frei (Android kehrt ins Internet-WLAN zurueck). */
+    private suspend fun printViaPrinterWifi(config: WcmConfig, img: PrintImage, copies: Int): Result<String> {
+        fun stage(text: String) = _state.update { it.copy(print = PrintState.Printing(text)) }
+        stage("Verbinde mit Drucker-WLAN … (bitte ggf. «Verbinden» bestätigen)")
+        val result = printerNetwork.use(config.printerWifiSsid, config.printerWifiPassword) { network ->
+            stage("Foto wird gedruckt …")
+            val client = OkHttpClient.Builder().socketFactory(network.socketFactory)
+                .connectTimeout(5, TimeUnit.SECONDS).readTimeout(90, TimeUnit.SECONDS).build()
+            // Eigene Instanz: ohne mDNS, feste Adresse des WCMPlus im Drucker-WLAN.
+            IppPrinter(getApplication(), useMdns = false, http = client)
+                .printJpeg(config, img.bytes, img.width, img.height, copies).getOrThrow()
+        }
+        stage("Zurück ins Internet-WLAN …")
+        kotlinx.coroutines.delay(2500)
+        return result
+    }
+
     fun printPhoto() {
         val jpeg = photoJpeg ?: return
         val bmp = _state.value.photo ?: return
-        _state.update { it.copy(print = PrintState.Printing) }
+        _state.update { it.copy(print = PrintState.Printing()) }
         viewModelScope.launch {
-            val img = withContext(Dispatchers.Default) { encodeForPrint(bmp, _state.value.config.printRotation, jpeg) }
-            val result = printer.printJpeg(_state.value.config, img.bytes, img.width, img.height, _state.value.copies)
+            val config = _state.value.config
+            val useWifi = printerWifiActive(config)
+            if (useWifi) {
+                // Upload braucht Internet: erst fertig werden lassen, bevor das WLAN gewechselt wird.
+                kotlinx.coroutines.withTimeoutOrNull(30_000) { _state.first { it.upload !is UploadState.Uploading } }
+            }
+            val img = withContext(Dispatchers.Default) { encodeForPrint(bmp, config.printRotation, jpeg) }
+            val copies = _state.value.copies
+            val result = if (useWifi) printViaPrinterWifi(config, img, copies) else printer.printJpeg(config, img.bytes, img.width, img.height, copies)
             _state.update {
                 it.copy(print = result.fold(
                     onSuccess = { text -> PrintState.Done(text) },
                     onFailure = { e -> PrintState.Failed(e.message ?: "Drucken fehlgeschlagen") },
                 ))
             }
+            if (useWifi) { refreshQueue(); }
+        }
+    }
+
+    /** Setup-Test: ins Drucker-WLAN wechseln, Warteschlangen suchen, zurueck. */
+    fun testPrinterWifi() {
+        val config = _state.value.config
+        if (!printerWifiActive(config)) { _state.update { it.copy(printerTest = "Bitte Drucker-WLAN-Name (SSID) eintragen und den Schalter einschalten.") }; return }
+        _state.update { it.copy(printerTest = "Verbinde mit «${config.printerWifiSsid}» … (bitte ggf. «Verbinden» bestätigen)") }
+        viewModelScope.launch {
+            val result = printerNetwork.use(config.printerWifiSsid, config.printerWifiPassword) { network ->
+                val client = OkHttpClient.Builder().socketFactory(network.socketFactory)
+                    .connectTimeout(5, TimeUnit.SECONDS).readTimeout(20, TimeUnit.SECONDS).build()
+                IppPrinter(getApplication(), useMdns = false, http = client).discoverAll(config).getOrThrow()
+            }
+            val text = result.fold(
+                onSuccess = { list -> "✓ Drucker-WLAN erreichbar. Gefundene Druckwarteschlangen:\n" + list.joinToString("\n") { f -> "• ${f.queueName}" } },
+                onFailure = { e -> "✗ ${e.message}" },
+            )
+            _state.update { it.copy(printerTest = text) }
         }
     }
 

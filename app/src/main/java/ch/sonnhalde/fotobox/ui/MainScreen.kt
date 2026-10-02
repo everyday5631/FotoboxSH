@@ -87,6 +87,7 @@ class Actions(
     val onExitApp: () -> Unit,
     val onOpenWifi: () -> Unit,
     val onTestPrint: () -> Unit,
+    val onTestPrinterWifi: () -> Unit,
     val onTestUpload: () -> Unit,
     val onRetryQueue: () -> Unit,
     val onClearQueue: () -> Unit,

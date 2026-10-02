@@ -107,6 +107,7 @@ fun SetupScreen(state: UiState, actions: Actions) {
                 }
                 SetupTab.Printer -> {
                     ConnectionSection(state, actions.onConfigChange, actions.onCheckConnection, actions.onTestPrinter)
+                    PrinterWifiSection(state, actions)
                     PrintFormatSection(state, actions)
                 }
                 SetupTab.Queue -> {
@@ -154,6 +155,26 @@ private fun <T> ChoiceRow(label: String, options: List<Pair<String, T>>, selecte
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for ((text, value) in options) SonnButton(text, primary = value == selected, onClick = { onSelect(value) })
         }
+    }
+}
+
+/** Zum Drucken automatisch ins Drucker-WLAN wechseln (und danach zurueck ins Internet-WLAN fuer den QR-Code). */
+@Composable
+private fun PrinterWifiSection(state: UiState, actions: Actions) {
+    val cfg = state.config
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionTitle("Drucker", "Drucker-WLAN automatisch")
+        Text(
+            "Für den Fall, dass das Tablet im Internet-WLAN (z. B. SH-GAST) den Drucker nicht sieht: Beim Drucken verbindet sich die App " +
+                "kurz mit dem WLAN des Druckers und danach wieder zurück. Beim ersten Mal fragt Android um Erlaubnis.",
+            color = Sonn.Stone, fontSize = 13.sp,
+        )
+        SettingSwitch("Zum Drucken ins Drucker-WLAN wechseln", cfg.printerWifiSwitch) { actions.onConfigQuiet(cfg.copy(printerWifiSwitch = it)) }
+        SonnField("Name des Drucker-WLANs (z. B. WCMPLUS-aed)", cfg.printerWifiSsid, KeyboardType.Text) { actions.onConfigQuiet(cfg.copy(printerWifiSsid = it)) }
+        SonnField("Passwort des Drucker-WLANs", cfg.printerWifiPassword, KeyboardType.Password) { actions.onConfigQuiet(cfg.copy(printerWifiPassword = it)) }
+        SonnField("Adresse des Druckers im Drucker-WLAN", cfg.printerWifiHost, KeyboardType.Uri) { actions.onConfigQuiet(cfg.copy(printerWifiHost = it)) }
+        SonnButton("Drucker-WLAN testen", primary = false, onClick = actions.onTestPrinterWifi)
+        state.printerTest?.let { Text(it, color = Sonn.Stone, fontSize = 13.sp) }
     }
 }
 
