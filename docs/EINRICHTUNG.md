@@ -35,7 +35,7 @@ untereinander («Client-Isolation»), sodass das Tablet den Drucker im Gast-WLAN
 1. Tablet **einmal** im Gast-WLAN anmelden (Android-Einstellungen, z. B. über *Setup → WLAN → Android-WLAN-Einstellungen öffnen*).
 2. WCMPlus-Hotspot einschalten lassen (Abschnitt 3). *Setup → Drucker → Drucker-WLAN automatisch*:
    - Schalter **«Zum Drucken ins Drucker-WLAN wechseln»** an
-   - **Name des Drucker-WLANs** (z. B. `WCMPLUS-aed`), **Passwort des Drucker-WLANs**, **Adresse des Druckers im Drucker-WLAN** (Standard `192.168.4.1`)
+   - **Name des Drucker-WLANs** (z. B. `WCMPLUS-aed`), **Passwort des Drucker-WLANs** (das in Abschnitt 3 genannte; der Vorgabewert der App ist die Werkseinstellung `dnp12345`, er muss also angepasst sein), **Adresse des Druckers im Drucker-WLAN** (Standard `192.168.4.1`)
    - **Drucker-WLAN testen**
 3. Ablauf pro Foto: Upload + QR-Code im Gast-WLAN → «Drucken» → Verbinden mit dem Drucker-WLAN → Druck → Android verbindet zurück.
    Der Wechsel dauert einige Sekunden und trennt das Internet kurz.
@@ -51,13 +51,13 @@ Schritte braucht es nur bei Neuaufbau oder wenn sich das WLAN ändert.
 
 1. DNP QW410 an den Strom anschliessen und einschalten. Das WCMPlus-Modul (in der Regel am Drucker angebracht) startet und erstellt ein
    eigenes WLAN **`WCMPLUS-xxx`**.
-2. **Nicht über die Fotobox-App**, sondern mit **Laptop oder Smartphone** (mit Browser) in dieses WLAN gehen. Passwort laut Hersteller
-   `dnp12345` (falls gefragt; andere Module, z. B. AirCast, haben ein anderes). Die Warnung «Kein Internetzugriff» ist normal, weil dieses
+2. **Nicht über die Fotobox-App**, sondern mit **Laptop oder Smartphone** (mit Browser) in dieses WLAN gehen. Passwort in der Sonnhalde: `$onnh4ld3-F0tob0x*` (von der Sonnhalde gesetzt;
+   Werkseinstellung laut Hersteller `dnp12345`, andere Module wie AirCast haben ein anderes). Die Warnung «Kein Internetzugriff» ist normal, weil dieses
    WLAN kein Internet hat; bestätigen.
 3. **Portal öffnen:** Der QW410 druckt in der Regel automatisch eine **Testseite mit dem Zugangs-Link** (z. B. `192.168.4.1`).
    Kommt kein Ausdruck, im Browser direkt `http://192.168.4.1` eingeben.
 4. **Mit dem lokalen WLAN verbinden:** Menüsymbol (oft drei Balken) → **«Netzwerkeinstellungen»** (oder ähnlich) → **«WLAN-Anschluss»** →
-   lokales WLAN wählen → **dessen** Passwort eingeben (nicht `dnp12345`). Danach ist das Modul (und damit der Drucker) im lokalen WLAN.
+   lokales WLAN wählen → **dessen** Passwort eingeben (nicht das Passwort des Modul-WLANs). Danach ist das Modul (und damit der Drucker) im lokalen WLAN.
 5. Das Gerät, mit dem konfiguriert wurde, wieder vom Modul-WLAN trennen und ins normale WLAN zurückholen.
 6. **Nur passwortgeschützte WLANs:** Das Modul unterstützt laut Hersteller nur die Verbindung zu einem **verschlüsselten** WLAN; bei einem
    offenen WLAN kann der Drucker nicht angezeigt werden. Der Hersteller empfiehlt ein verschlüsseltes WLAN auch aus Datenschutzgründen.
@@ -137,7 +137,7 @@ Die Zugangsdaten gehören **nur ins Tablet**, nicht ins Repository und nicht in 
 
 ## 8. Wartung
 
-- **App aktualisieren:** Neue APK von der Release-Seite laden und über die installierte App installieren (Einstellungen bleiben).
+- **App aktualisieren:** Neue APK von der Release-Seite laden (Releases entstehen per Knopfdruck, siehe [RELEASE.md](RELEASE.md)) und über die installierte App installieren (Einstellungen bleiben).
   Ältere, anders signierte Builds vorher deinstallieren. Danach Version im Setup prüfen und die Checkliste (Abschnitt 1) durchgehen.
 - **Banner-Text:** *Setup → Konfiguration → Foto → Banner unten* (max. 28 Zeichen, Vorschau darunter).
 - **Startbildschirm:** *Setup → Konfiguration → Retail-Modus → Startbildschirm*: Überschrift, Text des Start-Knopfs, **Hintergrundbild wählen** / **Entfernen**.

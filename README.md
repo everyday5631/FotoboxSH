@@ -11,6 +11,7 @@ Dokumentation für Dritte:
 | [docs/EINRICHTUNG.md](docs/EINRICHTUNG.md) | Einsatz vor Ort: Checkliste, Netz (Gast-WLAN mit Wechsel zum Drucker), WCMPlus, Upload, Kiosk, Fehlersuche, Datenschutz, Wartung |
 | [docs/nextcloud.md](docs/nextcloud.md) | Upload nach Nextcloud einrichten |
 | [docs/power-automate-flow.md](docs/power-automate-flow.md) | Upload nach SharePoint über Power Automate |
+| [docs/RELEASE.md](docs/RELEASE.md) | Release mit APK veröffentlichen (Workflow, Versionsschema) |
 | [docs/ENTWICKLUNG.md](docs/ENTWICKLUNG.md) | Technik, Gerätefakten, Entscheidungen, offene Punkte (für Entwickelnde) |
 
 ## Funktionen
@@ -41,7 +42,7 @@ Nicht vorhanden (UpReach hat es): Video/GIF-Hintergrund, E-Mail-Versand, Hinterg
 
 1. Auf der **Release-Seite** dieses Repositorys die neueste Version öffnen und die APK-Datei auf das Tablet laden.
    `dev-build` ist ein automatisches Vorab-Release (wird bei jedem Entwicklungsstand überschrieben); für den Einsatz die
-   nummerierten Releases verwenden (erstes echtes Release: `v0.1.36`).
+   nummerierten Releases verwenden (erstes echtes Release: `v0.1.36`). Neue Releases werden per Knopfdruck in GitHub erstellt: [docs/RELEASE.md](docs/RELEASE.md).
 2. APK öffnen und installieren (Android verlangt einmalig die Erlaubnis «Installation aus unbekannten Quellen» für die App, mit der
    die Datei geöffnet wurde).
 3. **Update:** neue APK einfach über die installierte App installieren, die Einstellungen bleiben erhalten. Alle Builds sind mit
