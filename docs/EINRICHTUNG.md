@@ -1,0 +1,134 @@
+# Einrichtung und Einsatz vor Ort
+
+Anleitung für Mitarbeitende und IT. Überblick und Installation: [README.md](../README.md). Technik: [ENTWICKLUNG.md](ENTWICKLUNG.md).
+
+> **Stand der Prüfung:** Getestet ist der Ablauf auf einem Xiaomi-Tablet mit DNP QW410 und WCMPlus (Release `v0.1.36`).
+> Stellen, die **nicht getestet oder ungeklärt** sind, sind mit **(ungetestet)** bzw. **(offen)** markiert.
+
+## 1. Checkliste vor dem Anlass
+
+- [ ] Tablet **geladen** (oder Netzteil dabei). Die App hält den Bildschirm an, das Tablet verbraucht also dauernd Strom.
+- [ ] **App-Version** prüfen: *Setup* oben, «Aktive Konfiguration: SONNHALDE · Version 0.1.N (Commit)». Bei Bedarf aktualisieren (Abschnitt 8).
+- [ ] **Drucker** an, **Papier- und Farbband** eingelegt (DNP QW410), WCMPlus-Modul eingeschaltet.
+- [ ] **Netz** nach Abschnitt 2 aufgebaut; Tablet hat Internet.
+- [ ] *Setup → Drucker*: Status «WCMPlus: verbunden» (bzw. **Erneut prüfen**), Druckformat **4x6** gewählt.
+- [ ] **Testdruck** («Testdruck (Foto mit Banner)») ausgeführt, Bild kommt vollständig und richtig herum.
+- [ ] *Setup → Konfiguration → Upload-Ziel*: **Upload testen**, QR-Code mit dem Handy scannen, Testfoto öffnet sich.
+- [ ] *Setup → Warteschlange*: «Wartende Fotos: 0» (sonst **Jetzt senden**).
+- [ ] **Banner-Text** für den Anlass gesetzt (max. 28 Zeichen), PIN bekannt.
+- [ ] Ein vollständiger **Probedurchlauf** im Retail-Modus (Start → Foto → QR → Drucken).
+- [ ] Kiosk-Status kontrolliert (Abschnitt 5).
+
+## 2. Netz-Varianten
+
+**Warum es mehrere gibt:** Das WCMPlus-Modul ist ein **Druckserver, kein Router**. Sein eigenes WLAN `WCMPLUS-xxx` hat **kein Internet**.
+Die App braucht aber beides: Internet (Upload → QR-Code) und den Drucker. Ausserdem verstecken Gast-WLANs oft die Geräte
+untereinander («Client-Isolation»), sodass das Tablet den Drucker im selben WLAN nicht sieht. Daraus ergeben sich diese Varianten:
+
+| Variante | Wann sinnvoll | Funktionsweise |
+|---|---|---|
+| **A. Gast-WLAN mit automatischem WLAN-Wechsel** (z. B. «SH-GAST») | Vor Ort gibt es ein Gast-WLAN mit Internet, in dem der Drucker nicht erreichbar ist. In der Sonnhalde der getestete Fall. | Tablet bleibt im Gast-WLAN (Upload, QR-Code). Nur zum Drucken wechselt die App kurz ins Drucker-WLAN `WCMPLUS-xxx` und danach zurück. |
+| **B. Eigener Reiserouter im Repeater-Modus** | Kein brauchbares WLAN vor Ort, oder der Wechsel in A ist zu störanfällig. | Der Router verbindet sich mit einem vorhandenen WLAN und stellt ein eigenes bereit; Tablet und WCMPlus hängen darin und erreichen sich. Alternative laut Entwicklungsnotizen; **Einrichtung des Routers ist gerätespezifisch und hier nicht beschrieben (offen)**. |
+| **C. Smartphone-Hotspot** | Notlösung, wenn nichts anderes verfügbar ist. | Tablet und WCMPlus melden sich beim Hotspot des Smartphones an (WCMPlus als WLAN-Client, Abschnitt 3). **Nicht getestet (ungetestet)**; ob WCMPlus und Tablet sich im Hotspot erreichen, hängt vom Smartphone ab. |
+
+Reine Hotspot-Nutzung des WCMPlus (Tablet direkt in `WCMPLUS-xxx`) funktioniert zum Drucken, aber der **Upload scheitert** ohne
+Internet: Fotos landen dann in der Warteschlange (Abschnitt 6).
+
+### Variante A einrichten: Gast-WLAN + automatischer Wechsel
+
+1. Tablet **einmal** im Gast-WLAN anmelden (Android-Einstellungen, z. B. über *Setup → WLAN → Android-WLAN-Einstellungen öffnen*).
+2. WCMPlus-Hotspot einschalten lassen (Abschnitt 3). *Setup → Drucker → Drucker-WLAN automatisch*:
+   - Schalter **«Zum Drucken ins Drucker-WLAN wechseln»** an
+   - **Name des Drucker-WLANs** (z. B. `WCMPLUS-aed`), **Passwort des Drucker-WLANs**, **Adresse des Druckers im Drucker-WLAN** (Standard `192.168.4.1`)
+   - **Drucker-WLAN testen**
+3. Ablauf pro Foto: Upload + QR-Code im Gast-WLAN → «Drucken» → Verbinden mit dem Drucker-WLAN → Druck → Android verbindet zurück.
+   Der Wechsel dauert einige Sekunden und trennt das Internet kurz.
+4. Technik: `WifiNetworkSpecifier` (ab Android 10). **Android fragt beim ersten Verbinden um Erlaubnis.**
+
+**(offen / ungetestet):** Ob diese Systemabfrage im **gesperrten Kiosk** zuverlässig erscheint und bedienbar ist, ist nicht
+geklärt (laut Entwicklungsnotizen kann sie hakeln). Die Erlaubnis daher **vor dem Anlass ausserhalb des Kiosks einmal erteilen**
+(Testdruck im Setup) und im Kiosk-Probedurchlauf prüfen.
+
+## 3. WCMPlus einrichten
+
+1. Drucker und WCMPlus einschalten. Das Modul stellt einen **Hotspot `WCMPLUS-xxx`** bereit (Standardpasswort laut Entwicklungsnotizen
+   `dnp12345`; falls geändert, gilt das neue).
+2. Mit dem Tablet oder einem Handy in den Hotspot gehen und das **Portal** öffnen: `http://192.168.4.1`.
+3. Im Portal je nach Netz-Variante:
+   - **WLAN-Anschluss:** das WCMPlus als Client in ein lokales WLAN (bzw. Router/Hotspot) einbinden. Dann ändert sich die Adresse
+     per DHCP (Beispiele aus der Praxis: `.211`, `.164`); in der App die neue Adresse unter *Setup → Drucker* eintragen.
+   - **Antennenkonfiguration:** das Modul hat zwei Funkmodule und kann **Hotspot und WLAN-Client gleichzeitig** betreiben.
+     Die genaue Bezeichnung und Bedienung der Einstellung im Portal ist hier **nicht** dokumentiert **(offen)**; im WCMPlus-Handbuch nachsehen.
+4. **Druckwarteschlangen:** Der Druckserver meldet **pro Papierformat eine eigene Warteschlange**, z. B. `QW410-4x6` und `QW410-4x4`.
+   Das Format steckt im Namen. In der App: *Setup → Drucker → Druckformat (Warteschlange des Druckers)* → **`QW410-4x6`** wählen
+   (4x6 = 10 × 15 cm; «Automatisch (4x6)» wählt dasselbe). Werden keine Warteschlangen angezeigt: Drucker an und im selben WLAN? Dann **Erneut suchen**.
+5. Die App sucht den Drucker per mDNS (`_ipp._tcp`, wie Mopria); im Hotspot gilt die feste Adresse `192.168.4.1`.
+6. **Testdruck** auslösen. Skalierung, Ausrichtung und «Bild drehen» nur ändern, wenn der Testdruck falsch aussieht.
+
+## 4. Upload-Ziel
+
+*Setup → Konfiguration → Upload-Ziel für QR-Code*, Ziel wählen. In beiden Fällen anschliessend **Upload testen** (Tablet braucht
+Internet, der Drucker wird nicht gebraucht): Bei Erfolg erscheinen Link **und** QR-Code zum Testfoto.
+
+- **Nextcloud:** Adresse, Benutzername (Konto-ID), App-Passwort, Ordner. Vorbereitung in Nextcloud, Fehlermeldungen des Tests (`1/4` … `4/4`):
+  [nextcloud.md](nextcloud.md).
+- **SharePoint (Power Automate):** Flow bauen und die HTTP-POST-URL als «Upload-Link» eintragen. Anleitung, Testskript
+  (`tools/test-flow.sh`) und Lizenzhinweis (Premium-Connector): [power-automate-flow.md](power-automate-flow.md).
+
+Die Zugangsdaten gehören **nur ins Tablet**, nicht ins Repository und nicht in Chats/Mails.
+
+## 5. Kiosk / Retail-Modus
+
+- **Start:** Unten im Setup **Start**. Ab dann Vollbild; nach einem Neustart der App geht es direkt im Retail-Modus weiter.
+- **Beenden:** langer Druck auf das **Logo** (Startbildschirm) bzw. den **Banner**, dann **PIN** (Standard `1234`).
+  Im Setup beendet ⏻ oben die App (ebenfalls nach PIN).
+- **PIN ändern:** *Setup → Konfiguration → Sicherheit* («Neue PIN (mind. 4 Zeichen)» → **PIN speichern**). Standard-PIN vor dem Einsatz ändern.
+- **Device Owner (volle Sperre):** einmalig per ADB, nur auf einem Gerät **ohne Konten** und **ohne anderen Device Owner** (z. B. UpReach):
+  `adb shell dpm set-device-owner ch.sonnhalde.fotobox/.kiosk.AdminReceiver`. Danach startet der Kiosk ohne Rückfrage und ohne Ausstiegsgeste.
+- **Ohne Device Owner:** Android «Bildschirm fixieren»: einmalige Rückfrage, Ausstieg per Systemgeste (gilt nicht als sichere Sperre
+  gegen Gäste, die die Geste kennen).
+- Welcher Fall aktiv ist, zeigt *Setup → Konfiguration → Sicherheit*: «Kiosk: Device Owner (volle Sperre)» oder «kein Device Owner – nur «Bildschirm fixieren»».
+
+## 6. Fehlersuche
+
+| Symptom | Wahrscheinliche Ursache | Abhilfe |
+|---|---|---|
+| Kein QR-Code, «Nochmals versuchen» | Tablet hat kein Internet (z. B. noch im Drucker-Hotspot), oder Upload-Ziel falsch eingerichtet | Internet-WLAN prüfen; *Setup → Konfiguration → Upload testen* (Meldung beachten); Foto wartet sonst in der **Warteschlange** → *Setup → Warteschlange → Jetzt senden* |
+| Upload-Test: «1/4 Verbindung» | Kein Internet oder Nextcloud-Adresse falsch / keine Nextcloud | Netz prüfen; nur Hauptadresse ohne `/index.php` oder `/login` |
+| Anmeldung abgelehnt (**HTTP 401**) | Benutzername (Konto-ID, nicht Anzeigename/E-Mail) oder Passwort falsch; bei Zwei-Faktor/SSO geht das normale Passwort nicht | **App-Passwort** neu erstellen und eintragen ([nextcloud.md](nextcloud.md)) |
+| Upload «507» | Speicherplatz (Quota) des Nextcloud-Benutzers voll | Fotos löschen oder Quota erhöhen |
+| «4/4 Freigabe-Link» schlägt fehl | «Teilen per Link erlauben» ist in Nextcloud aus | In der Nextcloud-Administration aktivieren |
+| SharePoint: Flow antwortet nicht / kein Link | Flow-URL falsch oder Flow fehlerhaft; «Jeder»-Links nicht erlaubt | Ausführungsverlauf im Flow, `tools/test-flow.sh` ([power-automate-flow.md](power-automate-flow.md)) |
+| Drucker nicht gefunden / «WCMPlus: nicht erreichbar» | Drucker/WCMPlus aus; Tablet nicht im selben Netz; Gast-WLAN versteckt den Drucker (Client-Isolation); Adresse nach DHCP-Wechsel geändert | Einschalten, Netz prüfen; Variante A (WLAN-Wechsel) oder B (Reiserouter) nutzen; neue Adresse eintragen; **Erneut prüfen** / **Erneut suchen** |
+| Keine Druckwarteschlangen in der Liste | Drucker nicht erreichbar | wie oben; Hotspot-Adresse `192.168.4.1` testen |
+| Falsches Format / Bild abgeschnitten oder klein | Falsche Warteschlange (z. B. 4x4) oder Skalierung | *Setup → Drucker → Druckformat* auf **QW410-4x6**; ggf. Skalierung «Einpassen» / «Füllen (zuschneiden)», dann Testdruck |
+| Bild gedreht gedruckt | Ausrichtung/Drehung | «Ausrichtung» bzw. «Bild drehen» anpassen, Testdruck |
+| Direktdruck schlägt fehl | Drucker im Moment nicht erreichbar | Knopf «Über Android-Druckdialog drucken» (4 x 6 in.) als Ausweg |
+| Kamera schwarz | Berechtigung fehlt, oder Kamera von einer anderen App belegt | Kamera-Berechtigung der App in Android prüfen; andere Kamera-Apps schliessen; App neu starten; *Setup → Kamera* Front/Rück wechseln. **Genaue Ursache nicht abschliessend geklärt (offen)** |
+| WLAN wechselt nicht zurück (nach dem Drucken) | Android hat das vorherige WLAN nicht automatisch wieder verbunden | Im Setup *Android-WLAN-Einstellungen öffnen* und das Internet-WLAN manuell wählen; Wiederholung beobachten und melden **(Ursache offen)** |
+| WLAN-Wechsel-Abfrage erscheint nicht / hängt im Kiosk | Systemabfrage von Android im gesperrten Kiosk **(ungetestet, bekannte Grenze)** | Erlaubnis vorher ausserhalb des Kiosks erteilen (Abschnitt 2); sonst Variante B |
+| PIN vergessen | – | Ein PIN-Reset ist in der App **nicht vorgesehen**. Als Ausweg bleibt vermutlich die Neuinstallation der App (löscht die Einstellungen) **(ungetestet)** |
+| Update lässt sich nicht installieren | Alte Version war anders signiert | Alte App einmalig deinstallieren |
+
+## 7. Datenschutz
+
+- **Fotos zeigen Personen.** Gäste vor dem Foto informieren (Hinweis am Gerät). Bei Bewohnenden und Mitarbeitenden die Vorgaben
+  der Sonnhalde (Einwilligung/Persönlichkeitsschutz) beachten; die genauen Regeln dazu sind hier **nicht** festgelegt **(offen)**.
+- **Freigabe-Links** sind öffentlich: Wer den Link/QR-Code hat, sieht das Foto. Nextcloud: Ablaufdatum für Freigaben
+  erzwingen; SharePoint: «Jeder»-Links nur wenn gewollt.
+- **Aufbewahrung:** Dauer festlegen und Fotos im Upload-Ordner nach dem Anlass löschen bzw. automatisch löschen lassen.
+- **Auf dem Tablet:** Die App sendet die Fotos hoch; nicht hochgeladene Fotos liegen in der Warteschlange und können mit
+  *Warteschlange leeren* entfernt werden.
+- **Zugangsdaten** (App-Passwort, Flow-URL, WLAN-Passwort, PIN) liegen **unverschlüsselt** im App-Speicher. Eigenen Nextcloud-Benutzer
+  mit minimalen Rechten verwenden; bei Verlust des Tablets das App-Passwort widerrufen bzw. die Flow-URL erneuern.
+
+## 8. Wartung
+
+- **App aktualisieren:** Neue APK von der Release-Seite laden und über die installierte App installieren (Einstellungen bleiben).
+  Ältere, anders signierte Builds vorher deinstallieren. Danach Version im Setup prüfen und die Checkliste (Abschnitt 1) durchgehen.
+- **Banner-Text:** *Setup → Konfiguration → Foto → Banner unten* (max. 28 Zeichen, Vorschau darunter).
+- **Startbildschirm:** *Setup → Konfiguration → Retail-Modus → Startbildschirm*: Überschrift, Text des Start-Knopfs, **Hintergrundbild wählen** / **Entfernen**.
+- **Logo und Standard-Hintergrund:** Dateien `sonnhalde_logo.png` (Banner) und `start_background.jpg` in `app/src/main/res/drawable-nodpi/`
+  ersetzen und neu bauen (Entwickelnde); Austausch der Logo-Datei genügt.
+- **PIN ändern:** *Setup → Konfiguration → Sicherheit* (Abschnitt 5).
+- **Timer / Auto-Druck:** *Setup → Konfiguration → Ablauf*: Timer 3/5/10 s; «Foto automatisch drucken (1 Abzug)».
