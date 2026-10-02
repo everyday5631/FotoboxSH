@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -205,6 +206,14 @@ private fun UploadSection(state: UiState, actions: Actions) {
             SonnField("Upload-Link (Power-Automate-Flow)", cfg.flowUrl, KeyboardType.Uri) { actions.onConfigQuiet(cfg.copy(flowUrl = it)) }
         }
         SonnButton("Upload testen", primary = false, onClick = actions.onTestUpload)
+        state.uploadTestText?.let {
+            Text(it, color = if (it.startsWith("✗")) Sonn.Error else Sonn.Navy, fontSize = 14.sp)
+        }
+        state.uploadTestQr?.let { qr ->
+            Box(Modifier.border(1.dp, Sonn.Line, MaterialShape).background(androidx.compose.ui.graphics.Color.White).padding(10.dp)) {
+                Image(qr.asImageBitmap(), contentDescription = "QR-Code zum Testfoto", modifier = Modifier.size(200.dp))
+            }
+        }
     }
 }
 

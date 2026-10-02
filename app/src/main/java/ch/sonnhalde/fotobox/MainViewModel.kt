@@ -63,6 +63,9 @@ data class UiState(
     /** Fotos, die noch nicht nach SharePoint hochgeladen werden konnten. */
     val queueCount: Int = 0,
     val printerTest: String? = null,
+    /** Ergebnis des Upload-Tests im Setup (Text und QR-Code zum Link). */
+    val uploadTestText: String? = null,
+    val uploadTestQr: Bitmap? = null,
     /** Vom Drucker gemeldete Papierformate (IPP media-supported), zum Auswaehlen im Setup. */
     val printerMedia: List<String> = emptyList(),
     val qrInput: String = "",
@@ -280,18 +283,29 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Upload-Test mit Platzhalterfoto; zeigt den erzeugten Link oder den Fehler. */
+    /** Upload-Test mit Platzhalterfoto; zeigt Link + QR-Code (zum Gegenpruefen mit dem Handy) oder den genauen Fehler. */
     fun testUpload() {
         val config = _state.value.config
-        if (!uploadConfigured(config)) { _state.update { it.copy(message = "Upload ist nicht eingerichtet.") }; return }
-        _state.update { it.copy(message = "Upload-Test läuft …") }
+        if (!uploadConfigured(config)) {
+            _state.update { it.copy(uploadTestText = "✗ Upload ist nicht eingerichtet: bitte die Felder oben ausfüllen.", uploadTestQr = null) }
+            return
+        }
+        _state.update { it.copy(uploadTestText = "Test läuft …", uploadTestQr = null) }
         viewModelScope.launch {
             val jpeg = withContext(Dispatchers.Default) {
                 val bmp = PhotoComposer.composeDigital(PhotoComposer.preview(getApplication(), ""), config.bannerText.ifBlank { "Test" }, 900)
                 ByteArrayOutputStream().also { bmp.compress(Bitmap.CompressFormat.JPEG, 90, it) }.toByteArray()
             }
             val result = uploadTo(config, "test-${System.currentTimeMillis()}.jpg", jpeg)
-            _state.update { it.copy(message = result.fold({ url -> "Upload OK: $url" }, { e -> "Upload fehlgeschlagen: ${e.message}" })) }
+            result.fold(
+                onSuccess = { url ->
+                    val qr = withContext(Dispatchers.Default) { QrCode.generate(url, 600) }
+                    _state.update {
+                        it.copy(uploadTestText = "✓ Upload erfolgreich\n$url\nQR-Code mit dem Handy scannen: er öffnet das Testfoto.", uploadTestQr = qr)
+                    }
+                },
+                onFailure = { e -> _state.update { it.copy(uploadTestText = "✗ ${e.message ?: "Upload fehlgeschlagen"}", uploadTestQr = null) } },
+            )
         }
     }
 
