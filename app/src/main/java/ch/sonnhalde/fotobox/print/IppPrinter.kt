@@ -4,6 +4,9 @@ import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import ch.sonnhalde.fotobox.wcm.WcmConfig
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
@@ -32,44 +35,77 @@ class IppPrinter(
         .readTimeout(90, TimeUnit.SECONDS)
         .build(),
 ) {
-    data class Found(val ippUri: String, val httpUrl: String, val info: Ipp.Response)
-
-    @Volatile private var cached: Found? = null
-
-    /** Adresse des zuletzt gefundenen Druckers, z. B. 172.16.220.211. */
-    fun foundHost(): String? = cached?.httpUrl?.let { runCatching { URI(it).host }.getOrNull() }
-
-    /** Sucht den Drucker; liefert bei Misserfolg eine Fehlerbeschreibung mit allen Versuchen. */
-    suspend fun discover(config: WcmConfig): Result<Found> = withContext(Dispatchers.IO) {
-        cached?.takeIf { config.printerUri.isBlank() }?.let { return@withContext Result.success(it) }
-        val tried = mutableListOf<String>()
-        for (candidate in candidates(config)) {
-            val (ipp, httpUrl) = normalize(candidate)
-            val attempt = runCatching { post(httpUrl, Ipp.getPrinterAttributes(ipp)) }
-            val resp = attempt.getOrNull()
-            if (resp != null && resp.ok) {
-                return@withContext Result.success(Found(ipp, httpUrl, resp).also { cached = it })
-            }
-            tried += "$ipp → " + (resp?.statusText() ?: attempt.exceptionOrNull()?.message ?: "keine Antwort")
-        }
-        Result.failure(IllegalStateException("Drucker nicht gefunden:\n" + tried.joinToString("\n")))
+    data class Found(val ippUri: String, val httpUrl: String, val info: Ipp.Response) {
+        /** z. B. «QW410-4x6»: Beim WCMPlus gibt es pro Papierformat eine eigene Warteschlange. */
+        val queueName: String get() = ippUri.substringAfterLast('/')
     }
 
-    suspend fun printJpeg(config: WcmConfig, jpeg: ByteArray, landscape: Boolean, copies: Int = 1): Result<String> {
+    @Volatile private var cachedAll: List<Found> = emptyList()
+
+    /** Namen der zuletzt gefundenen Druckwarteschlangen. */
+    fun queueNames(): List<String> = cachedAll.map { it.queueName }
+
+    /** Adresse des zuletzt gefundenen Druckers, z. B. 172.16.220.211. */
+    fun foundHost(): String? = cachedAll.firstOrNull()?.httpUrl?.let { runCatching { URI(it).host }.getOrNull() }
+
+    /** Waehlt die Warteschlange: gewuenschter Name aus dem Setup, sonst «4x6», sonst die erste. */
+    fun pick(list: List<Found>, config: WcmConfig): Found {
+        val want = config.printerQueue.trim()
+        return list.firstOrNull { want.isNotBlank() && it.queueName.contains(want, ignoreCase = true) }
+            ?: list.firstOrNull { it.queueName.contains("4x6", ignoreCase = true) }
+            ?: list.first()
+    }
+
+    /** Sucht ALLE Druckwarteschlangen (mDNS + uebliche Pfade) parallel; Fehlschlag mit Auflistung der Versuche. */
+    suspend fun discoverAll(config: WcmConfig): Result<List<Found>> = withContext(Dispatchers.IO) {
+        if (config.printerUri.isBlank()) cachedAll.takeIf { it.isNotEmpty() }?.let { return@withContext Result.success(it) }
+        val tried = java.util.concurrent.CopyOnWriteArrayList<String>()
+        val found = coroutineScope {
+            candidates(config).distinct().map { candidate ->
+                async {
+                    val (ipp, httpUrl) = normalize(candidate)
+                    val attempt = runCatching { post(httpUrl, Ipp.getPrinterAttributes(ipp)) }
+                    val resp = attempt.getOrNull()
+                    if (resp != null && resp.ok) {
+                        Found(ipp, httpUrl, resp)
+                    } else {
+                        tried += "$ipp → " + (resp?.statusText() ?: attempt.exceptionOrNull()?.message ?: "keine Antwort")
+                        null
+                    }
+                }
+            }.awaitAll().filterNotNull().distinctBy { it.ippUri }
+        }
+        if (found.isEmpty()) {
+            Result.failure(IllegalStateException("Drucker nicht gefunden:\n" + tried.sorted().joinToString("\n")))
+        } else {
+            Result.success(found.sortedBy { it.queueName }.also { cachedAll = it })
+        }
+    }
+
+    suspend fun discover(config: WcmConfig): Result<Found> = discoverAll(config).map { pick(it, config) }
+
+    /**
+     * Druckt das Foto. Welches Format der Druckserver annimmt, steht in «document-format-supported»:
+     * JPEG direkt, sonst als PDF verpackt, sonst als octet-stream (Server erkennt den Typ selbst).
+     */
+    suspend fun printJpeg(config: WcmConfig, jpeg: ByteArray, imgW: Int, imgH: Int, copies: Int = 1): Result<String> {
         val printer = discover(config).getOrElse { return Result.failure(it) }
         val formats = printer.info.attrs["document-format-supported"].orEmpty()
-        if (formats.isNotEmpty() && "image/jpeg" !in formats) {
-            return Result.failure(IllegalStateException("Drucker nimmt kein JPEG an (unterstützt: ${formats.joinToString()})"))
+        val (mime, data) = when {
+            formats.isEmpty() || "image/jpeg" in formats -> "image/jpeg" to jpeg
+            "application/pdf" in formats -> "application/pdf" to PdfWrap.jpegToPdf(jpeg, imgW, imgH)
+            "application/octet-stream" in formats -> "application/octet-stream" to jpeg
+            else -> return Result.failure(IllegalStateException("Drucker nimmt weder JPEG noch PDF an (unterstützt: ${formats.joinToString()})"))
         }
-        val media = config.printMedia.trim().ifBlank {
-            printer.info.attrs["media-supported"].orEmpty().firstOrNull { it.contains("4x6") }
-        }
+        // «media-supported» ist beim WCMPlus «unknown»: das Format steckt in der Warteschlange, nicht im Auftrag.
+        val media = config.printMedia.trim().ifBlank { null }
         val scaling = config.printScaling.takeIf { it == "fit" || it == "fill" }
+        val landscape = imgW >= imgH
         val orientation = when (config.printOrientation) {
             "landscape" -> 4
             "portrait" -> 3
             "none" -> null
-            else -> if (landscape) 4 else 3
+            else -> if (mime == "application/pdf") null else if (landscape) 4 else 3
         }
         // Vom genauesten zum einfachsten Auftrag; manche Drucker lehnen einzelne Attribute ab.
         val attempts = listOf(
@@ -80,15 +116,16 @@ class IppPrinter(
         var lastError = "unbekannt"
         for (options in attempts) {
             val result = withContext(Dispatchers.IO) {
-                runCatching {
-                    post(printer.httpUrl, Ipp.printJob(printer.ippUri, "Sonnhalde Foto", "image/jpeg", options, jpeg))
-                }
+                runCatching { post(printer.httpUrl, Ipp.printJob(printer.ippUri, "Sonnhalde Foto", mime, options, data)) }
             }
             val resp = result.getOrNull()
-            if (resp != null && resp.ok) return Result.success(if (copies > 1) "$copies Abzüge an den Drucker gesendet." else "Foto an den Drucker gesendet.")
+            if (resp != null && resp.ok) {
+                val what = "${printer.queueName} ($mime)"
+                return Result.success(if (copies > 1) "$copies Abzüge an $what gesendet." else "Foto an $what gesendet.")
+            }
             lastError = resp?.statusText() ?: result.exceptionOrNull()?.message ?: lastError
         }
-        cached = null // Adresse neu suchen, falls sich der Drucker bewegt hat
+        cachedAll = emptyList() // Adresse neu suchen, falls sich der Drucker bewegt hat
         return Result.failure(IllegalStateException("Drucker hat den Auftrag abgelehnt ($lastError)"))
     }
 

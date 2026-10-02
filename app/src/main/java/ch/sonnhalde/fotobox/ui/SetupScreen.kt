@@ -163,17 +163,17 @@ private fun PrintFormatSection(state: UiState, actions: Actions) {
     val cfg = state.config
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SectionTitle("Drucker", "Druckformat")
-        // Papierformate beim Oeffnen vom Drucker laden und zum Antippen anbieten.
-        LaunchedEffect(Unit) { if (state.printerMedia.isEmpty()) actions.onTestPrinter() }
-        if (state.printerMedia.isNotEmpty()) {
-            ChoiceRow("Papierformat (vom Drucker)", listOf("Automatisch (4x6)" to "") + state.printerMedia.map { it to it }, cfg.printMedia) {
-                actions.onConfigQuiet(cfg.copy(printMedia = it))
+        // Beim WCMPlus gibt es pro Papierformat eine eigene Druckwarteschlange (z. B. QW410-4x6 und QW410-4x4).
+        LaunchedEffect(Unit) { if (state.printerQueues.isEmpty()) actions.onTestPrinter() }
+        if (state.printerQueues.isNotEmpty()) {
+            ChoiceRow("Druckformat (Warteschlange des Druckers)", listOf("Automatisch (4x6)" to "") + state.printerQueues.map { it to it }, cfg.printerQueue) {
+                actions.onConfigQuiet(cfg.copy(printerQueue = it))
             }
         } else {
-            Text("Papierformate werden vom Drucker geladen … (Drucker eingeschaltet und im selben WLAN?)", color = Sonn.Stone, fontSize = 13.sp)
-            SonnButton("Formate vom Drucker laden", primary = false, onClick = actions.onTestPrinter)
+            Text("Druckwarteschlangen werden gesucht … (Drucker eingeschaltet und im selben WLAN?)", color = Sonn.Stone, fontSize = 13.sp)
+            SonnButton("Erneut suchen", primary = false, onClick = actions.onTestPrinter)
         }
-        SonnField("Papierformat von Hand (IPP-Name, leer = oben gewählt)", cfg.printMedia, KeyboardType.Text) { actions.onConfigQuiet(cfg.copy(printMedia = it)) }
+        Text("Das Papierformat steckt im Namen der Warteschlange (4x6 = 10 x 15 cm).", color = Sonn.Stone, fontSize = 12.sp)
         ChoiceRow("Skalierung", listOf("Einpassen" to "fit", "Füllen (zuschneiden)" to "fill", "Drucker entscheidet" to "auto"), cfg.printScaling) {
             actions.onConfigQuiet(cfg.copy(printScaling = it))
         }

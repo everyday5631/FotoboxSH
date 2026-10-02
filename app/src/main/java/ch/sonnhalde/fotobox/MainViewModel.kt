@@ -66,8 +66,8 @@ data class UiState(
     /** Ergebnis des Upload-Tests im Setup (Text und QR-Code zum Link). */
     val uploadTestText: String? = null,
     val uploadTestQr: Bitmap? = null,
-    /** Vom Drucker gemeldete Papierformate (IPP media-supported), zum Auswaehlen im Setup. */
-    val printerMedia: List<String> = emptyList(),
+    /** Gefundene Druckwarteschlangen des WCMPlus (eine pro Papierformat, z. B. QW410-4x6), zum Auswaehlen im Setup. */
+    val printerQueues: List<String> = emptyList(),
     val qrInput: String = "",
     val qrBitmap: Bitmap? = null,
     val savedUri: Uri? = null,
@@ -254,8 +254,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val bmp = _state.value.photo ?: return
         _state.update { it.copy(print = PrintState.Printing) }
         viewModelScope.launch {
-            val (bytes, landscape) = withContext(Dispatchers.Default) { encodeForPrint(bmp, _state.value.config.printRotation, jpeg) }
-            val result = printer.printJpeg(_state.value.config, bytes, landscape, _state.value.copies)
+            val img = withContext(Dispatchers.Default) { encodeForPrint(bmp, _state.value.config.printRotation, jpeg) }
+            val result = printer.printJpeg(_state.value.config, img.bytes, img.width, img.height, _state.value.copies)
             _state.update {
                 it.copy(print = result.fold(
                     onSuccess = { text -> PrintState.Done(text) },
@@ -268,14 +268,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun testPrinter() {
         _state.update { it.copy(printerTest = "Suche Drucker …") }
         viewModelScope.launch {
-            val result = printer.discover(_state.value.config)
-            result.getOrNull()?.let { f ->
-                _state.update { it.copy(printerMedia = f.info.attrs["media-supported"].orEmpty().distinct().take(40)) }
-            }
+            val result = printer.discoverAll(_state.value.config)
+            val all = result.getOrNull().orEmpty()
+            _state.update { it.copy(printerQueues = all.map { f -> f.queueName }) }
             val text = result.fold(
-                onSuccess = { f ->
-                    "Gefunden: ${f.ippUri}\n" + listOf("printer-name", "printer-state", "printer-state-reasons", "document-format-supported", "media-supported")
-                        .joinToString("\n") { k -> "$k: " + f.info.attrs[k].orEmpty().joinToString(", ").take(300) }
+                onSuccess = { list ->
+                    val used = printer.pick(list, _state.value.config)
+                    "Gefundene Druckwarteschlangen:\n" + list.joinToString("\n") { f -> "• ${f.queueName}  (${f.ippUri})" } +
+                        "\nVerwendet wird: ${used.queueName}\n" +
+                        listOf("printer-state", "printer-state-reasons", "document-format-supported")
+                            .joinToString("\n") { k -> "$k: " + used.info.attrs[k].orEmpty().joinToString(", ").take(300) }
                 },
                 onFailure = { e -> e.message ?: "Fehler" },
             )
@@ -309,12 +311,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Druck-Bild nach Einstellung drehen und als JPEG kodieren; zweiter Wert: Querformat? */
-    private fun encodeForPrint(bmp: Bitmap, rotation: Int, original: ByteArray?): Pair<ByteArray, Boolean> {
-        if (rotation % 360 == 0 && original != null) return original to (bmp.width >= bmp.height)
+    class PrintImage(val bytes: ByteArray, val width: Int, val height: Int)
+
+    /** Druck-Bild nach Einstellung drehen und als JPEG kodieren (mit Bildmassen fuer das PDF). */
+    private fun encodeForPrint(bmp: Bitmap, rotation: Int, original: ByteArray?): PrintImage {
+        if (rotation % 360 == 0 && original != null) return PrintImage(original, bmp.width, bmp.height)
         val rotated = if (rotation % 360 == 0) bmp else Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, Matrix().apply { postRotate(rotation.toFloat()) }, true)
         val jpeg = ByteArrayOutputStream().also { rotated.compress(Bitmap.CompressFormat.JPEG, 92, it) }.toByteArray()
-        return jpeg to (rotated.width >= rotated.height)
+        return PrintImage(jpeg, rotated.width, rotated.height)
     }
 
     // ---- Upload-Warteschlange ----
@@ -345,11 +349,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun testPrint() {
         _state.update { it.copy(printerTest = "Testdruck wird gesendet …") }
         viewModelScope.launch {
-            val (jpeg, landscape) = withContext(Dispatchers.Default) {
+            val img = withContext(Dispatchers.Default) {
                 val bmp = PhotoComposer.preview(getApplication(), _state.value.config.bannerText.ifBlank { "Testdruck" }, width = 1800)
                 encodeForPrint(bmp, _state.value.config.printRotation, null)
             }
-            val result = printer.printJpeg(_state.value.config, jpeg, landscape, copies = 1)
+            val result = printer.printJpeg(_state.value.config, img.bytes, img.width, img.height, copies = 1)
             _state.update { it.copy(printerTest = result.fold({ it }, { e -> e.message ?: "Testdruck fehlgeschlagen" })) }
         }
     }
