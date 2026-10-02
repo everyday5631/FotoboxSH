@@ -44,7 +44,7 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
 ## Bekannte Grenzen / Risiken
 
 - WLAN-Wechsel: Android fragt beim Verbinden um Erlaubnis; im gesperrten Kiosk kann diese Systemabfrage hakeln. Trennt das Internet kurz.
-- Keine Berechtigung/Sperre gegen Schliessen der Hotspot-Anmeldung; Passwörter liegen im App-Speicher (SharedPreferences, unverschlüsselt).
+- Zugangsdaten (Nextcloud-App-Passwort, Flow-URL, WLAN-Passwort, PIN) liegen im App-Speicher (SharedPreferences, unverschlüsselt). Eigene Zugänge mit minimalen Rechten verwenden.
 - Kein Video/GIF-Hintergrund, kein E-Mail-Versand, keine Hintergrund-Freisteller (UpReach hat sie).
 
 ## Offene Punkte (Reihenfolge nach Wunsch der Nutzerperson)
