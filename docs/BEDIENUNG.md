@@ -1,10 +1,10 @@
 # Bedienung der App
 
-Beschreibung der Bildschirme und Knöpfe, so wie sie im Code benannt sind (Stand: `main` mit Release `v0.1.36`). Einrichtung und Fehlersuche:
+Beschreibung der Bildschirme und Knöpfe (Beschriftungen aus dem Code, mit Screenshots abgeglichen) (Stand: `main` mit Release `v0.1.36`). Einrichtung und Fehlersuche:
 [EINRICHTUNG.md](EINRICHTUNG.md). Überblick: [README.md](../README.md).
 
-> Screenshots fehlen noch und werden aus dem Tablet ergänzt (Ablageort: `docs/bilder/`). Die Texte stammen aus dem Quellcode, nicht von einem
-> Test auf dem Gerät.
+> Die Screenshots (`docs/bilder/`) stammen vom Xiaomi-Tablet mit Version 0.1.36 (16df1e6). Die Beschreibung folgt dem Quellcode und wurde
+> mit den Screenshots abgeglichen. QR-Codes und der Nextcloud-Link auf den Bildern sind geschwärzt bzw. durch einen Platzhalter ersetzt.
 
 ## Ablauf im Überblick
 
@@ -12,9 +12,14 @@ Splash (ca. 2 s, mit Versionsanzeige) → **Setup-Modus** (Einrichtung) → **St
 
 ## 1. Setup-Modus (Personal)
 
-Oben die Reiter, unten der grosse **Start**-Knopf, oben rechts **⏻** (App beenden, verlangt die PIN). Ganz oben steht die aktive Konfiguration mit Version.
+Oben die Reiter, unten der grosse **Start**-Knopf, oben rechts **⏻** (App beenden, verlangt die PIN). Unten steht die aktive Konfiguration mit Version. Das ⏻-Symbol oben rechts wird auf dem Tablet als Kästchen-Zeichen dargestellt (Symbol fehlt in der Schrift), der Knopf öffnet trotzdem die PIN-Abfrage «App beenden».
+
+![Setup: App beenden](bilder/setup-app-beenden.jpg)
 
 ### Reiter «Konfiguration»
+
+![Setup Konfiguration, oben](bilder/setup-konfiguration-1.jpg)
+![Setup Konfiguration, unten](bilder/setup-konfiguration-2.jpg)
 
 | Bereich | Inhalt |
 |---|---|
@@ -27,35 +32,59 @@ Oben die Reiter, unten der grosse **Start**-Knopf, oben rechts **⏻** (App been
 
 ### Reiter «Kamera»
 
+![Setup Kamera](bilder/setup-kamera.jpg)
+
 Live-Vorschau (4:3). **Frontkamera** / **Rückkamera**, Schieberegler **Belichtungskorrektur** und **Zoom**. Fehlt die Berechtigung, steht
 «Bitte Kamera-Zugriff erlauben.».
 
 ### Reiter «Drucker»
 
+![Setup Drucker, oben](bilder/setup-drucker-1.jpg)
+![Setup Drucker, WLAN und Druckformat](bilder/setup-drucker-2.jpg)
+![Setup Drucker, Druckformat](bilder/setup-drucker-3.jpg)
+
 1. **WCMPlus-Verbindung:** Statuspunkt (grün = verbunden, rot = nicht erreichbar) mit Adresse; **Erneut prüfen**, **Einstellungen** (Adresse von
    WCMPlus, Pfad für Verbindungstest, Token optional, Drucker-Adresse IPP – leer = automatisch), **Drucker testen**.
+   Das Ergebnis erscheint darunter: «Gefundene Druckwarteschlangen» (z. B. `QW410-4x4`, `QW410-4x6` mit IPP-Adresse), «Verwendet wird: QW410-4x6», `printer-state`, `printer-state-reasons` und die unterstützten Dokumentformate.
+   Im Screenshot steht die WCMPlus-Verbindung auf «Nicht erreichbar» (Portal `192.168.4.1:80`), obwohl die Druckwarteschlangen gefunden wurden: Portal-Prüfung und Druckersuche sind getrennte Abfragen.
 2. **Drucker-WLAN automatisch:** Schalter «Zum Drucken ins Drucker-WLAN wechseln», Name, Passwort und Adresse des Drucker-WLANs,
    **Drucker-WLAN testen**.
 3. **Druckformat:** «Druckformat (Warteschlange des Druckers)», «Skalierung» (Einpassen / Füllen (zuschneiden) / Drucker entscheidet),
    «Ausrichtung» (Automatisch / Quer / Hoch / Nicht senden), «Bild drehen» (0°/90°/180°/270°), **Testdruck (Foto mit Banner)**.
-   Hinweis in der App: Gäste können bis zu 3 Abzüge drucken.
+   Hinweis in der App: Gäste können bis zu 3 Abzüge drucken. «Druckformat» bietet «Automatisch (4x6)», `QW410-4x4` und `QW410-4x6`. Im Screenshot sind Einpassen, Quer und 90° gewählt (Werte dieses Tablets, keine allgemeine Empfehlung).
 
 ### Reiter «Warteschlange»
+
+![Setup Warteschlange](bilder/setup-warteschlange.jpg)
 
 «Wartende Fotos: N» (grün bei 0, sonst rot). Nicht hochgeladene Fotos warten hier. **Jetzt senden** versucht den Upload erneut,
 **Warteschlange leeren** verwirft die wartenden Fotos. Am Reiter steht die Anzahl in Klammern.
 
 ### Reiter «WLAN»
 
-Hinweis zum Netz und der Knopf **Android-WLAN-Einstellungen öffnen**.
+![Setup WLAN](bilder/setup-wlan.jpg)
+
+Hinweis zum Netz, der Knopf **Android-WLAN-Einstellungen öffnen**, darunter der WCMPlus-Status (im Screenshot «WCMPlus: nicht erreichbar», weil das Tablet im Internet-WLAN war) und **Erneut prüfen**.
 
 ## 2. Retail-Modus (Gäste)
 
-1. **Startbildschirm:** Hintergrundbild, Logo, Überschrift und der weisse Start-Knopf (Text einstellbar). Unten rechts klein die Version.
-2. **Kamera:** Live-Bild. Ein **Tipp irgendwo auf das Bild** oder auf den **runden Auslöser** rechts startet den Timer; der Countdown erscheint gross
+1. **Startbildschirm:**
+
+   ![Startbildschirm](bilder/welcome.jpg)
+
+    Hintergrundbild, Logo, Überschrift und der weisse Start-Knopf (Text einstellbar). Unten rechts klein die Version. Ist der Kiosk nicht gesperrt, erscheint oben rechts der Hinweis «Kiosk-Sperre nicht aktiv: in den Android-Einstellungen «Bildschirm fixieren» einschalten (oder App als Device Owner einrichten).» ([Bild](bilder/welcome-hinweis.jpg)).
+2. **Kamera:**
+
+   ![Kamera im Retail-Modus](bilder/kamera-retail.jpg)
+
+    Live-Bild. Ein **Tipp irgendwo auf das Bild** oder auf den **runden Auslöser** rechts startet den Timer; der Countdown erscheint gross
    in der Mitte. Oben links Logo und der Knopf **‹** (zurück zum Start). Unten rechts der Text-Sticker. Fehlt die Berechtigung:
    «Bitte Kamera-Zugriff erlauben.».
-3. **Ergebnis («Ihr Foto»):**
+3. **Ergebnis («Ihr Foto»)** (Querformat, QR-Code geschwärzt):
+
+   ![Ergebnis](bilder/ergebnis.jpg)
+
+  
    - Links bzw. oben **DIGITALE VERSION** mit QR-Code und «ZUM HERUNTERLADEN SCANNEN». Während des Uploads «QR-Code wird erstellt …».
      Schlägt es fehl: Hinweis «Der Download-Link konnte nicht erstellt werden …» und **Nochmals versuchen** (das Foto wartet zusätzlich in der Warteschlange).
    - Rechts bzw. unten **DRUCK-VERSION** mit **−** / **+** (Anzahl Abzüge, 1–3) und **DRUCKEN**. Danach der Fortschritt, bei Erfolg
@@ -65,10 +94,12 @@ Hinweis zum Netz und der Knopf **Android-WLAN-Einstellungen öffnen**.
 
 ### Verwaltung / Beenden aus dem Retail-Modus
 
+![PIN-Abfrage im Retail-Modus](bilder/pin-retail-beenden.jpg)
+
 **Langer Druck** auf das Logo (Startbildschirm, Kamera) bzw. den Banner (Ergebnis) öffnet die PIN-Abfrage «Retail-Modus beenden» (Feld «PIN», bei falscher Eingabe «PIN falsch»,
 **OK** / **Abbrechen**). Mit richtiger PIN geht es zurück in den Setup-Modus; ⏻ dort beendet die App.
 
 ## Offen
 
-- Screenshots der Bildschirme (von der Nutzerperson).
-- Ob die Reihenfolge der Bereiche im Setup auf dem Tablet genau so erscheint, ist nach dem Code beschrieben, aber nicht am Gerät abgeglichen.
+- Nicht als Screenshot vorhanden: Ergebnis-Seite bei Upload-/Druckfehler («Nochmals versuchen», «Über Android-Druckdialog drucken»), laufender Countdown, Android-Systemfenster beim WLAN-Wechsel.
+- Das Kästchen-Zeichen statt ⏻ ist eine Beobachtung vom Tablet; ob es ein Schriftproblem der App ist, ist ungeklärt.
