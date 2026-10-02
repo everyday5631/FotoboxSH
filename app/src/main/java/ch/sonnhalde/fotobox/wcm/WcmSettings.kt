@@ -19,6 +19,14 @@ data class WcmConfig(
     val useFrontCamera: Boolean = true,
     /** Text im Banner unten rechts auf dem Foto (max. 28 Zeichen), z. B. «Personalfest 2027». */
     val bannerText: String = "",
+    /** Text im Banner unten links (max. 28 Zeichen). */
+    val bannerTextLeft: String = "",
+    /** Textfarbe im Banner: black | gold | navy | rainbow. */
+    val bannerColor: String = "navy",
+    /** Deckkraft des Banner-Hintergrunds in Prozent (100 = deckend, 0 = durchsichtig). */
+    val bannerAlpha: Int = 100,
+    /** Banner auch auf der digitalen Version (QR-Code/Download) einblenden. */
+    val bannerDigital: Boolean = true,
     /** Countdown vor der Aufnahme in Sekunden. */
     val timerSeconds: Int = 3,
     /** Ueberschrift und Knopf-Text auf dem Startbildschirm des Retail-Modus. */
@@ -64,6 +72,10 @@ class WcmSettings(context: Context) {
         autoPrint = prefs.getBoolean("autoPrint", false),
         useFrontCamera = prefs.getBoolean("useFrontCamera", true),
         bannerText = prefs.getString("bannerText", "").orEmpty(),
+        bannerTextLeft = prefs.getString("bannerTextLeft", "").orEmpty(),
+        bannerColor = prefs.getString("bannerColor", "navy").orEmpty(),
+        bannerAlpha = prefs.getInt("bannerAlpha", 100),
+        bannerDigital = prefs.getBoolean("bannerDigital", true),
         timerSeconds = prefs.getInt("timerSeconds", 3),
         exposureIndex = prefs.getInt("exposureIndex", 0),
         zoomRatio = prefs.getFloat("zoomRatio", 1f),
@@ -95,6 +107,10 @@ class WcmSettings(context: Context) {
             .putBoolean("autoPrint", config.autoPrint)
             .putBoolean("useFrontCamera", config.useFrontCamera)
             .putString("bannerText", config.bannerText.take(28))
+            .putString("bannerTextLeft", config.bannerTextLeft.take(28))
+            .putString("bannerColor", config.bannerColor)
+            .putInt("bannerAlpha", config.bannerAlpha.coerceIn(0, 100))
+            .putBoolean("bannerDigital", config.bannerDigital)
             .putInt("timerSeconds", config.timerSeconds)
             .putInt("exposureIndex", config.exposureIndex)
             .putFloat("zoomRatio", config.zoomRatio)

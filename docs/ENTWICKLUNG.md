@@ -8,8 +8,8 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
 2. **Retail-Modus** (Kiosk): **Welcome** (Hintergrund, Logo, Überschrift, «jetzt starten») → **Kamera** (Live-Bild, Timer) → **Result**
    (digitale Version mit QR-Code links, Druck-Version mit «DRUCKEN» rechts, Haken = fertig). Nach 90 s ohne Eingabe zurück zum Start.
    Beenden: langer Druck auf Logo/Banner, dann PIN (Standard `1234`).
-3. Pro Foto entstehen zwei Bilder (`photo/PhotoComposer`): **Druck-Version** 3:2 mit hellem Banner (Logo mittig, Text rechts, max. 28 Zeichen)
-   und **digitale Version** mit buntem Text-Sticker. Hochgeladen wird die digitale, gedruckt die Druck-Version.
+3. Pro Foto entstehen zwei Bilder (`photo/PhotoComposer`): **Druck-Version** 3:2 mit Banner (Logo mittig, Text links/rechts je max. 28 Zeichen, Farbe, Transparenz, eigenes Logo; `BannerStyle`)
+   und **digitale Version** (Originalformat, Banner optional ein/aus). Hochgeladen wird die digitale, gedruckt die Druck-Version.
 
 ## Pakete
 

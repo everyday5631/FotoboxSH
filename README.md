@@ -28,9 +28,14 @@ Datei `app/src/main/res/drawable-nodpi/start_background.jpg` ablegen (wird autom
 
 ## Foto-Banner
 
-Das Druckbild ist 3:2 (10 x 15 cm) mit hellem Banner unten: Sonnhalde-Logo mittig, frei wählbarer Text rechts
-(max. 28 Zeichen, z. B. «Personalfest 2027»; Schrift passt sich an). Das Original-Logo liegt unter
-`app/src/main/res/drawable-nodpi/sonnhalde_logo.png` (Austausch der Datei genügt).
+Das Druckbild ist 3:2 (10 x 15 cm) mit Banner unten: Logo mittig, frei wählbarer Text links und rechts
+(je max. 28 Zeichen, z. B. «Personalfest 2027»; die Schrift passt sich an). Im Setup (Reiter Konfiguration) einstellbar:
+
+- **Textfarbe:** Schwarz, Gold, Navy (SH-Farben) oder Regenbogen
+- **Logo:** eigenes PNG oder JPG wählen; «Standard-Logo» stellt das Sonnhalde-Logo wieder her
+  (Original: `app/src/main/res/drawable-nodpi/sonnhalde_logo.png`)
+- **Transparenz:** Deckkraft des Banner-Hintergrunds 0–100 %. Bei 100 % steht der Banner unter dem Foto, darunter liegt er durchscheinend auf dem Foto
+- **Digitale Version:** Banner ein/aus (an: Banner auch auf dem Foto, das per QR-Code heruntergeladen wird)
 
 ## Ablauf (technisch)
 
