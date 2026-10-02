@@ -45,18 +45,39 @@ Die Abfrage ist im Kiosk bedienbar, der Wechsel funktioniert (Rückmeldung aus d
 
 ## 3. WCMPlus einrichten
 
-1. Drucker und WCMPlus einschalten. Das Modul stellt einen **Hotspot `WCMPLUS-xxx`** bereit (Standardpasswort laut Entwicklungsnotizen
-   `dnp12345`; falls geändert, gilt das neue).
-2. Mit dem Tablet oder einem Handy in den Hotspot gehen und das **Portal** öffnen: `http://192.168.4.1`.
-3. Im Portal sind **WLAN-Anschluss** und **Antennenkonfiguration** bereits passend eingestellt. **Nicht verändern**, solange alles funktioniert.
-   Das Modul hat zwei Funkmodule und kann Hotspot und WLAN-Client gleichzeitig betreiben. Wird es in ein lokales WLAN eingebunden,
-   ändert sich die Adresse per DHCP (Beispiele aus der Praxis: `.211`, `.164`); dann die neue Adresse in der App unter *Setup → Drucker* eintragen.
-   Für Details gilt die Anleitung des Herstellers.
-4. **Druckwarteschlangen:** Der Druckserver meldet **pro Papierformat eine eigene Warteschlange**, z. B. `QW410-4x6` und `QW410-4x4`.
-   Das Format steckt im Namen. In der App: *Setup → Drucker → Druckformat (Warteschlange des Druckers)* → **`QW410-4x6`** wählen
-   (4x6 = 10 × 15 cm; «Automatisch (4x6)» wählt dasselbe). Werden keine Warteschlangen angezeigt: Drucker an und im selben WLAN? Dann **Erneut suchen**.
-5. Die App sucht den Drucker per mDNS (`_ipp._tcp`, wie Mopria); im Hotspot gilt die feste Adresse `192.168.4.1`.
-6. **Testdruck** auslösen. Skalierung, Ausrichtung und «Bild drehen» nur ändern, wenn der Testdruck falsch aussieht.
+Quelle: Herstelleranleitung «UpReach Fotosystem | Drucker Android» (beschreibt das WCM Plus am DNP QW410; sie ist für UpReach geschrieben,
+das Einrichten des Moduls ist aber für unsere App dasselbe). Ist das Modul bereits eingerichtet, **nichts verändern**; die folgenden
+Schritte braucht es nur bei Neuaufbau oder wenn sich das WLAN ändert.
+
+1. DNP QW410 an den Strom anschliessen und einschalten. Das WCMPlus-Modul (in der Regel am Drucker angebracht) startet und erstellt ein
+   eigenes WLAN **`WCMPLUS-xxx`**.
+2. **Nicht über die Fotobox-App**, sondern mit **Laptop oder Smartphone** (mit Browser) in dieses WLAN gehen. Passwort laut Hersteller
+   `dnp12345` (falls gefragt; andere Module, z. B. AirCast, haben ein anderes). Die Warnung «Kein Internetzugriff» ist normal, weil dieses
+   WLAN kein Internet hat; bestätigen.
+3. **Portal öffnen:** Der QW410 druckt in der Regel automatisch eine **Testseite mit dem Zugangs-Link** (z. B. `192.168.4.1`).
+   Kommt kein Ausdruck, im Browser direkt `http://192.168.4.1` eingeben.
+4. **Mit dem lokalen WLAN verbinden:** Menüsymbol (oft drei Balken) → **«Netzwerkeinstellungen»** (oder ähnlich) → **«WLAN-Anschluss»** →
+   lokales WLAN wählen → **dessen** Passwort eingeben (nicht `dnp12345`). Danach ist das Modul (und damit der Drucker) im lokalen WLAN.
+5. Das Gerät, mit dem konfiguriert wurde, wieder vom Modul-WLAN trennen und ins normale WLAN zurückholen.
+6. **Nur passwortgeschützte WLANs:** Das Modul unterstützt laut Hersteller nur die Verbindung zu einem **verschlüsselten** WLAN; bei einem
+   offenen WLAN kann der Drucker nicht angezeigt werden. Der Hersteller empfiehlt ein verschlüsseltes WLAN auch aus Datenschutzgründen.
+7. **WLAN-Passwort oder Netz geändert?** Schritte ab 2 mit dem neuen Netz wiederholen.
+8. In diesem Projekt sind **WLAN-Anschluss** und **Antennenkonfiguration** (zwei Funkmodule: Hotspot und WLAN-Client gleichzeitig)
+   bereits passend eingestellt; **nicht verändern**, solange alles funktioniert. Per DHCP kann sich die Adresse ändern (Beispiele aus der
+   Praxis: `.211`, `.164`); dann die neue Adresse in der App unter *Setup → Drucker* eintragen.
+
+> **Unterschied zur Herstelleranleitung:** Der Hersteller verlangt für UpReach, dass Drucker und Fotosystem **im selben WLAN** hängen und
+> man den Drucker danach nicht mehr über das WCMPlus-WLAN verbindet. Unsere App löst den Fall «Gast-WLAN versteckt den Drucker» anders:
+> Sie wechselt zum Drucken kurz ins Drucker-WLAN (Abschnitt 2).
+
+### Druckwarteschlange und Testdruck
+
+- **Druckwarteschlangen:** Der Druckserver meldet **pro Papierformat eine eigene Warteschlange**, z. B. `QW410-4x6` und `QW410-4x4`.
+  Das Format steckt im Namen. In der App: *Setup → Drucker → Druckformat (Warteschlange des Druckers)* → **`QW410-4x6`** wählen
+  (4x6 = 10 × 15 cm; «Automatisch (4x6)» wählt dasselbe). Werden keine Warteschlangen angezeigt: Drucker an und im selben WLAN? Dann **Erneut suchen**.
+  Im Android-Druckdialog (Ausweg-Knopf) heisst der Drucker «QW410-4x6 @ dnpimage», Papierformat «4 x 6 in.» (= 10 × 15 cm).
+- Die App sucht den Drucker per mDNS (`_ipp._tcp`, wie Mopria); im Hotspot gilt die feste Adresse `192.168.4.1`.
+- **Testdruck** auslösen. Skalierung, Ausrichtung und «Bild drehen» nur ändern, wenn der Testdruck falsch aussieht.
 
 ## 4. Upload-Ziel
 
