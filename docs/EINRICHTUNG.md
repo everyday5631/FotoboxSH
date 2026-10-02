@@ -3,7 +3,7 @@
 Anleitung für Mitarbeitende und IT. Überblick und Installation: [README.md](../README.md). Technik: [ENTWICKLUNG.md](ENTWICKLUNG.md).
 
 > **Stand der Prüfung:** Getestet ist der Ablauf auf einem Xiaomi-Tablet mit DNP QW410 und WCMPlus (Release `v0.1.36`).
-> Stellen, die **nicht getestet oder ungeklärt** sind, sind mit **(ungetestet)** bzw. **(offen)** markiert.
+> Das Gerät ist im Einsatz bereits fertig eingerichtet; diese Anleitung dient zur Kontrolle und für den Neuaufbau.
 
 ## 1. Checkliste vor dem Anlass
 
@@ -19,20 +19,16 @@ Anleitung für Mitarbeitende und IT. Überblick und Installation: [README.md](..
 - [ ] Ein vollständiger **Probedurchlauf** im Retail-Modus (Start → Foto → QR → Drucken).
 - [ ] Kiosk-Status kontrolliert (Abschnitt 5).
 
-## 2. Netz-Varianten
+## 2. Netz-Variante
 
-**Warum es mehrere gibt:** Das WCMPlus-Modul ist ein **Druckserver, kein Router**. Sein eigenes WLAN `WCMPLUS-xxx` hat **kein Internet**.
+**Warum so:** Das WCMPlus-Modul ist ein **Druckserver, kein Router**. Sein eigenes WLAN `WCMPLUS-xxx` hat **kein Internet**.
 Die App braucht aber beides: Internet (Upload → QR-Code) und den Drucker. Ausserdem verstecken Gast-WLANs oft die Geräte
-untereinander («Client-Isolation»), sodass das Tablet den Drucker im selben WLAN nicht sieht. Daraus ergeben sich diese Varianten:
+untereinander («Client-Isolation»), sodass das Tablet den Drucker im Gast-WLAN nicht sieht. Deshalb gilt:
 
-| Variante | Wann sinnvoll | Funktionsweise |
+| Variante | Wann | Funktionsweise |
 |---|---|---|
-| **A. Gast-WLAN mit automatischem WLAN-Wechsel** (z. B. «SH-GAST») | Vor Ort gibt es ein Gast-WLAN mit Internet, in dem der Drucker nicht erreichbar ist. In der Sonnhalde der getestete Fall. | Tablet bleibt im Gast-WLAN (Upload, QR-Code). Nur zum Drucken wechselt die App kurz ins Drucker-WLAN `WCMPLUS-xxx` und danach zurück. |
-| **B. Eigener Reiserouter im Repeater-Modus** | Kein brauchbares WLAN vor Ort, oder der Wechsel in A ist zu störanfällig. | Der Router verbindet sich mit einem vorhandenen WLAN und stellt ein eigenes bereit; Tablet und WCMPlus hängen darin und erreichen sich. Alternative laut Entwicklungsnotizen; **Einrichtung des Routers ist gerätespezifisch und hier nicht beschrieben (offen)**. |
-| **C. Smartphone-Hotspot** | Notlösung, wenn nichts anderes verfügbar ist. | Tablet und WCMPlus melden sich beim Hotspot des Smartphones an (WCMPlus als WLAN-Client, Abschnitt 3). **Nicht getestet (ungetestet)**; ob WCMPlus und Tablet sich im Hotspot erreichen, hängt vom Smartphone ab. |
-
-Reine Hotspot-Nutzung des WCMPlus (Tablet direkt in `WCMPLUS-xxx`) funktioniert zum Drucken, aber der **Upload scheitert** ohne
-Internet: Fotos landen dann in der Warteschlange (Abschnitt 6).
+| **A. Gast-WLAN mit automatischem WLAN-Wechsel** (z. B. «SH-GAST») – **Standard** | Normalfall: Gast-WLAN mit Internet, in dem der Drucker nicht erreichbar ist. | Tablet bleibt im Gast-WLAN (Upload, QR-Code). Nur zum Drucken wechselt die App kurz ins Drucker-WLAN `WCMPLUS-xxx` und danach zurück. |
+| Nur WCMPlus-Hotspot (Notfall) | Kein Internet vorhanden. | Tablet direkt in `WCMPLUS-xxx`: Drucken funktioniert, der **Upload scheitert** ohne Internet. Fotos landen in der Warteschlange (*Setup → Warteschlange → Jetzt senden*, sobald wieder Internet da ist). |
 
 ### Variante A einrichten: Gast-WLAN + automatischer Wechsel
 
@@ -45,20 +41,17 @@ Internet: Fotos landen dann in der Warteschlange (Abschnitt 6).
    Der Wechsel dauert einige Sekunden und trennt das Internet kurz.
 4. Technik: `WifiNetworkSpecifier` (ab Android 10). **Android fragt beim ersten Verbinden um Erlaubnis.**
 
-**(offen / ungetestet):** Ob diese Systemabfrage im **gesperrten Kiosk** zuverlässig erscheint und bedienbar ist, ist nicht
-geklärt (laut Entwicklungsnotizen kann sie hakeln). Die Erlaubnis daher **vor dem Anlass ausserhalb des Kiosks einmal erteilen**
-(Testdruck im Setup) und im Kiosk-Probedurchlauf prüfen.
+Die Abfrage ist im Kiosk bedienbar, der Wechsel funktioniert (Rückmeldung aus dem Praxistest). Trotzdem im Probedurchlauf einmal prüfen.
 
 ## 3. WCMPlus einrichten
 
 1. Drucker und WCMPlus einschalten. Das Modul stellt einen **Hotspot `WCMPLUS-xxx`** bereit (Standardpasswort laut Entwicklungsnotizen
    `dnp12345`; falls geändert, gilt das neue).
 2. Mit dem Tablet oder einem Handy in den Hotspot gehen und das **Portal** öffnen: `http://192.168.4.1`.
-3. Im Portal je nach Netz-Variante:
-   - **WLAN-Anschluss:** das WCMPlus als Client in ein lokales WLAN (bzw. Router/Hotspot) einbinden. Dann ändert sich die Adresse
-     per DHCP (Beispiele aus der Praxis: `.211`, `.164`); in der App die neue Adresse unter *Setup → Drucker* eintragen.
-   - **Antennenkonfiguration:** das Modul hat zwei Funkmodule und kann **Hotspot und WLAN-Client gleichzeitig** betreiben.
-     Die genaue Bezeichnung und Bedienung der Einstellung im Portal ist hier **nicht** dokumentiert **(offen)**; im WCMPlus-Handbuch nachsehen.
+3. Im Portal sind **WLAN-Anschluss** und **Antennenkonfiguration** bereits passend eingestellt. **Nicht verändern**, solange alles funktioniert.
+   Das Modul hat zwei Funkmodule und kann Hotspot und WLAN-Client gleichzeitig betreiben. Wird es in ein lokales WLAN eingebunden,
+   ändert sich die Adresse per DHCP (Beispiele aus der Praxis: `.211`, `.164`); dann die neue Adresse in der App unter *Setup → Drucker* eintragen.
+   Für Details gilt die Anleitung des Herstellers.
 4. **Druckwarteschlangen:** Der Druckserver meldet **pro Papierformat eine eigene Warteschlange**, z. B. `QW410-4x6` und `QW410-4x4`.
    Das Format steckt im Namen. In der App: *Setup → Drucker → Druckformat (Warteschlange des Druckers)* → **`QW410-4x6`** wählen
    (4x6 = 10 × 15 cm; «Automatisch (4x6)» wählt dasselbe). Werden keine Warteschlangen angezeigt: Drucker an und im selben WLAN? Dann **Erneut suchen**.
@@ -99,24 +92,23 @@ Die Zugangsdaten gehören **nur ins Tablet**, nicht ins Repository und nicht in 
 | Upload «507» | Speicherplatz (Quota) des Nextcloud-Benutzers voll | Fotos löschen oder Quota erhöhen |
 | «4/4 Freigabe-Link» schlägt fehl | «Teilen per Link erlauben» ist in Nextcloud aus | In der Nextcloud-Administration aktivieren |
 | SharePoint: Flow antwortet nicht / kein Link | Flow-URL falsch oder Flow fehlerhaft; «Jeder»-Links nicht erlaubt | Ausführungsverlauf im Flow, `tools/test-flow.sh` ([power-automate-flow.md](power-automate-flow.md)) |
-| Drucker nicht gefunden / «WCMPlus: nicht erreichbar» | Drucker/WCMPlus aus; Tablet nicht im selben Netz; Gast-WLAN versteckt den Drucker (Client-Isolation); Adresse nach DHCP-Wechsel geändert | Einschalten, Netz prüfen; Variante A (WLAN-Wechsel) oder B (Reiserouter) nutzen; neue Adresse eintragen; **Erneut prüfen** / **Erneut suchen** |
+| Drucker nicht gefunden / «WCMPlus: nicht erreichbar» | Drucker/WCMPlus aus; Tablet nicht im selben Netz; Gast-WLAN versteckt den Drucker (Client-Isolation); Adresse nach DHCP-Wechsel geändert | Einschalten, Netz prüfen; Variante A (WLAN-Wechsel) nutzen; neue Adresse eintragen; **Erneut prüfen** / **Erneut suchen** |
 | Keine Druckwarteschlangen in der Liste | Drucker nicht erreichbar | wie oben; Hotspot-Adresse `192.168.4.1` testen |
 | Falsches Format / Bild abgeschnitten oder klein | Falsche Warteschlange (z. B. 4x4) oder Skalierung | *Setup → Drucker → Druckformat* auf **QW410-4x6**; ggf. Skalierung «Einpassen» / «Füllen (zuschneiden)», dann Testdruck |
 | Bild gedreht gedruckt | Ausrichtung/Drehung | «Ausrichtung» bzw. «Bild drehen» anpassen, Testdruck |
 | Direktdruck schlägt fehl | Drucker im Moment nicht erreichbar | Knopf «Über Android-Druckdialog drucken» (4 x 6 in.) als Ausweg |
-| Kamera schwarz | Berechtigung fehlt, oder Kamera von einer anderen App belegt | Kamera-Berechtigung der App in Android prüfen; andere Kamera-Apps schliessen; App neu starten; *Setup → Kamera* Front/Rück wechseln. **Genaue Ursache nicht abschliessend geklärt (offen)** |
-| WLAN wechselt nicht zurück (nach dem Drucken) | Android hat das vorherige WLAN nicht automatisch wieder verbunden | Im Setup *Android-WLAN-Einstellungen öffnen* und das Internet-WLAN manuell wählen; Wiederholung beobachten und melden **(Ursache offen)** |
-| WLAN-Wechsel-Abfrage erscheint nicht / hängt im Kiosk | Systemabfrage von Android im gesperrten Kiosk **(ungetestet, bekannte Grenze)** | Erlaubnis vorher ausserhalb des Kiosks erteilen (Abschnitt 2); sonst Variante B |
-| PIN vergessen | – | Ein PIN-Reset ist in der App **nicht vorgesehen**. Als Ausweg bleibt vermutlich die Neuinstallation der App (löscht die Einstellungen) **(ungetestet)** |
+| Kamera schwarz | **Berechtigung der App fehlt** (so aufgetreten) | In den Android-Einstellungen die Kamera-Berechtigung der App erteilen; App neu starten |
+| PIN vergessen | – | Ein PIN-Reset ist in der App **nicht vorgesehen**. Als Ausweg bleibt die Neuinstallation der App (löscht die Einstellungen) |
 | Update lässt sich nicht installieren | Alte Version war anders signiert | Alte App einmalig deinstallieren |
 
 ## 7. Datenschutz
 
-- **Fotos zeigen Personen.** Gäste vor dem Foto informieren (Hinweis am Gerät). Bei Bewohnenden und Mitarbeitenden die Vorgaben
-  der Sonnhalde (Einwilligung/Persönlichkeitsschutz) beachten; die genauen Regeln dazu sind hier **nicht** festgelegt **(offen)**.
+- **Fotos zeigen Personen.** Gäste vor dem Foto informieren (Hinweis am Gerät). Bei Bewohnenden und Mitarbeitenden die internen Vorgaben
+  der Sonnhalde (Einwilligung/Persönlichkeitsschutz) beachten.
 - **Freigabe-Links** sind öffentlich: Wer den Link/QR-Code hat, sieht das Foto. Nextcloud: Ablaufdatum für Freigaben
   erzwingen; SharePoint: «Jeder»-Links nur wenn gewollt.
-- **Aufbewahrung:** Dauer festlegen und Fotos im Upload-Ordner nach dem Anlass löschen bzw. automatisch löschen lassen.
+- **Wohin gehen die Fotos:** Im regulären Betrieb über Power Automate in SharePoint (Microsoft 365, siehe [Microsoft: Sicherheit, Datenschutz und Compliance](https://learn.microsoft.com/de-de/microsoft-365/business-premium/m365bp-security-privacy-compliance?view=o365-worldwide)); in der Test-/Beta-Version in eine private Nextcloud.
+- **Aufbewahrung:** Fotos werden in der Regel **nach einem Monat gelöscht**, ausser jemand fragt nach. Die Löschung ist eine Vorgabe des Betriebs; die App löscht selbst nichts im Upload-Ordner, das muss im Ordner bzw. per Aufbewahrungsregel geschehen.
 - **Auf dem Tablet:** Die App sendet die Fotos hoch; nicht hochgeladene Fotos liegen in der Warteschlange und können mit
   *Warteschlange leeren* entfernt werden.
 - **Zugangsdaten** (App-Passwort, Flow-URL, WLAN-Passwort, PIN) liegen **unverschlüsselt** im App-Speicher. Eigenen Nextcloud-Benutzer

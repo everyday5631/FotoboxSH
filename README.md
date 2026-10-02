@@ -8,7 +8,7 @@ Dokumentation für Dritte:
 
 | Dokument | Inhalt |
 |---|---|
-| [docs/EINRICHTUNG.md](docs/EINRICHTUNG.md) | Einsatz vor Ort: Checkliste, Netz-Varianten, WCMPlus, Upload, Kiosk, Fehlersuche, Datenschutz, Wartung |
+| [docs/EINRICHTUNG.md](docs/EINRICHTUNG.md) | Einsatz vor Ort: Checkliste, Netz (Gast-WLAN mit Wechsel zum Drucker), WCMPlus, Upload, Kiosk, Fehlersuche, Datenschutz, Wartung |
 | [docs/nextcloud.md](docs/nextcloud.md) | Upload nach Nextcloud einrichten |
 | [docs/power-automate-flow.md](docs/power-automate-flow.md) | Upload nach SharePoint über Power Automate |
 | [docs/ENTWICKLUNG.md](docs/ENTWICKLUNG.md) | Technik, Gerätefakten, Entscheidungen, offene Punkte (für Entwickelnde) |
@@ -51,7 +51,7 @@ Nicht vorhanden (UpReach hat es): Video/GIF-Hintergrund, E-Mail-Versand, Hinterg
 ## Kurz-Einstieg in 5 Schritten
 
 1. **App installieren** (siehe oben) und öffnen. Es erscheint der Setup-Modus.
-2. **Drucker einrichten:** WCMPlus-Modul und Tablet in ein gemeinsames Netz bringen (Varianten: [docs/EINRICHTUNG.md](docs/EINRICHTUNG.md)),
+2. **Drucker einrichten:** WCMPlus-Modul und Tablet so verbinden, dass beide erreichbar sind (siehe [docs/EINRICHTUNG.md](docs/EINRICHTUNG.md), Abschnitt Netz),
    dann *Setup → Drucker* → Druckformat 4x6 wählen → **Testdruck**.
 3. **Upload einrichten:** *Setup → Konfiguration → Upload-Ziel* → Nextcloud ([docs/nextcloud.md](docs/nextcloud.md)) oder SharePoint
    ([docs/power-automate-flow.md](docs/power-automate-flow.md)) → **Upload testen**, QR-Code mit dem Handy scannen.
