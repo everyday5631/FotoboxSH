@@ -31,7 +31,7 @@ Bei einem Fehler steht, welcher Schritt scheiterte:
 |---|---|
 | `1/4 Verbindung: keine Verbindung …` | Tablet hat kein Internet (Drucker-Hotspot!), oder die Adresse stimmt nicht |
 | `1/4 Verbindung: … keine Nextcloud` | Falsche Adresse; nur die Hauptadresse eintragen, ohne `/index.php` oder `/login` |
-| `2/4 Anmeldung abgelehnt` | Benutzername oder **App-Passwort** falsch (nicht das normale Passwort) |
+| `2/4 Anmeldung abgelehnt (HTTP 401)` | Benutzername (Konto-ID, nicht Anzeigename/E-Mail) oder Passwort falsch. Bei aktivierter **Zwei-Faktor-Anmeldung** oder SSO/LDAP geht das normale Passwort nicht: dann **App-Passwort** verwenden |
 | `3/4 Upload: … 507` | Speicherplatz (Quota) des Benutzers voll |
 | `4/4 Freigabe-Link: … (Teilen per Link erlaubt?)` | In der Nextcloud-Administration «Teilen per Link erlauben» aktivieren |
 

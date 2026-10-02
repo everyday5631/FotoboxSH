@@ -114,7 +114,7 @@ class NextcloudUploader(
         }
 
     private fun checkAuth(step: String, code: Int) {
-        if (code == 401) throw StepError(step, "Anmeldung abgelehnt – Benutzername und **App-Passwort** prüfen (nicht das normale Passwort)")
+        if (code == 401) throw StepError(step, "Anmeldung abgelehnt (HTTP 401) – Benutzername (Konto-ID, nicht Anzeigename) und Passwort prüfen. Bei aktivierter Zwei-Faktor-Anmeldung ist ein App-Passwort nötig (Nextcloud → Einstellungen → Sicherheit → Neues App-Passwort)")
         if (code == 403) throw StepError(step, "Zugriff verboten (HTTP 403) – Rechte des Benutzers prüfen")
     }
 
