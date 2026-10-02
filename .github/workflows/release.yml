@@ -1,0 +1,95 @@
+name: Release
+
+# Manuell starten: Actions → Release → «Run workflow». Siehe docs/RELEASE.md.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Versions-Tag, z. B. v0.2.0"
+        required: true
+        type: string
+      ref:
+        description: "Branch oder Commit, der gebaut wird"
+        required: false
+        default: main
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ inputs.tag }}
+      REF: ${{ inputs.ref }}
+    steps:
+      - name: Tag pruefen (Format, noch nicht vorhanden)
+        run: |
+          if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::Tag «$TAG» hat kein gueltiges Format (erwartet z. B. v0.2.0)."; exit 1
+          fi
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" >/dev/null 2>&1 \
+             || gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::Tag oder Release «$TAG» existiert bereits. Bitte einen neuen Tag waehlen."; exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || 'main' }}
+
+      - name: Commit festhalten
+        run: echo "APP_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Versionsnummern bestimmen
+        run: |
+          echo "APP_VERSION=${TAG#v}" >> "$GITHUB_ENV"
+          # versionCode muss hoeher sein als bei allen bisherigen Builds (build.yml zaehlt eigene Lauf-Nummern),
+          # sonst lehnt Android das Update ueber eine installierte Dev-Version ab.
+          BASE=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/build.yml/runs?per_page=1" --jq '.workflow_runs[0].run_number // 0' || echo 0)
+          echo "APP_VERSION_CODE=$((BASE + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
+
+      - name: APK bauen
+        run: ./gradlew assembleDebug
+
+      - name: APK pruefen (Signatur, Paketname, Version, Mindest-Android)
+        run: |
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          "$BT/apksigner" verify --verbose "$APK"
+          "$BT/aapt2" dump badging "$APK" | tee badging.txt | grep -E "^package|sdkVersion|targetSdkVersion|launchable-activity"
+          grep -q "^package: name='ch.sonnhalde.fotobox'" badging.txt || { echo "::error::Unerwarteter Paketname"; exit 1; }
+          grep -q "versionName='$APP_VERSION'" badging.txt || { echo "::error::versionName stimmt nicht mit dem Tag ueberein"; exit 1; }
+          grep -q "^sdkVersion:'29'" badging.txt || { echo "::error::Mindest-Android ist nicht API 29"; exit 1; }
+          cp "$APK" "Sonnhalde-Fotobox-$TAG.apk"
+          sha256sum "Sonnhalde-Fotobox-$TAG.apk" | tee sha256.txt
+
+      - name: Release veroeffentlichen
+        run: |
+          # Zweite Pruefung kurz vor dem Anlegen (falls der Tag inzwischen vergeben wurde).
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" >/dev/null 2>&1; then
+            echo "::error::Tag «$TAG» existiert inzwischen bereits."; exit 1
+          fi
+          SHA256=$(cut -d' ' -f1 sha256.txt)
+          cat > notes.md <<NOTES
+          **Sonnhalde Fotobox $TAG** – direkt installierbare APK (Version ${TAG#v}, Commit ${APP_SHA::7}).
+
+          SHA-256 der APK:
+          \`$SHA256\`
+
+          ---
+          NOTES
+          gh release create "$TAG" "Sonnhalde-Fotobox-$TAG.apk" \
+            --target "$APP_SHA" --title "$TAG" \
+            --notes-file notes.md --generate-notes --latest
