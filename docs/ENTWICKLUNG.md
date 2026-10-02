@@ -49,7 +49,7 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
 
 ## Offene Punkte (Reihenfolge nach Wunsch der Nutzerperson)
 
-1. Release-Workflow (Tag eingeben → Release mit APK).
+1. ~~Release-Workflow~~ erstellt (`docs/RELEASE.md`), noch nicht ausgeführt
 2. Netz-Diagnose im Setup (eigene IP, Erreichbarkeit, Netz-Suche, Protokoll zum Teilen).
 3. Konfiguration exportieren/importieren (zweites Tablet).
 4. Fische-Bild als Standard-Hintergrund (`start_background.jpg`), Datei steht noch aus.

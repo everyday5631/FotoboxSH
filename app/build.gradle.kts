@@ -5,6 +5,9 @@ plugins {
 
 // Version aus der CI: Build-Nummer (GitHub-Lauf) und Commit; lokal ohne CI = 1 / «lokal».
 val runNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
+// Release-Workflow: Versionsname (aus dem Tag) und Versionscode koennen von aussen vorgegeben werden.
+val appVersion = System.getenv("APP_VERSION")?.takeIf { it.isNotBlank() } ?: "0.1.$runNumber"
+val appVersionCode = System.getenv("APP_VERSION_CODE")?.toIntOrNull() ?: runNumber
 val gitSha = (System.getenv("APP_SHA") ?: System.getenv("GITHUB_SHA"))?.take(7) ?: "lokal"
 
 android {
@@ -16,8 +19,8 @@ android {
         // API 29+: Dateien koennen ohne Speicher-Berechtigung per MediaStore in "Downloads" gespeichert werden.
         minSdk = 29
         targetSdk = 34
-        versionCode = runNumber
-        versionName = "0.1.$runNumber"
+        versionCode = appVersionCode
+        versionName = appVersion
         buildConfigField("String", "GIT_SHA", "\"$gitSha\"")
     }
 
