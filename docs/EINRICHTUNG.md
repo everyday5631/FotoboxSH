@@ -1,6 +1,6 @@
 # Einrichtung und Einsatz vor Ort
 
-Anleitung für Mitarbeitende und IT. Überblick und Installation: [README.md](../README.md). Technik: [ENTWICKLUNG.md](ENTWICKLUNG.md).
+Anleitung für Mitarbeitende und IT. Überblick und Installation: [README.md](../README.md). Bildschirme und Knöpfe: [BEDIENUNG.md](BEDIENUNG.md). Technik: [ENTWICKLUNG.md](ENTWICKLUNG.md).
 
 > **Stand der Prüfung:** Getestet ist der Ablauf auf einem Xiaomi-Tablet mit DNP QW410 und WCMPlus (Release `v0.1.36`).
 > Das Gerät ist im Einsatz bereits fertig eingerichtet; diese Anleitung dient zur Kontrolle und für den Neuaufbau.

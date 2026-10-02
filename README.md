@@ -9,6 +9,7 @@ Dokumentation für Dritte:
 | Dokument | Inhalt |
 |---|---|
 | [docs/EINRICHTUNG.md](docs/EINRICHTUNG.md) | Einsatz vor Ort: Checkliste, Netz (Gast-WLAN mit Wechsel zum Drucker), WCMPlus, Upload, Kiosk, Fehlersuche, Datenschutz, Wartung |
+| [docs/BEDIENUNG.md](docs/BEDIENUNG.md) | Bildschirme und Knöpfe der App (Setup- und Retail-Modus) |
 | [docs/nextcloud.md](docs/nextcloud.md) | Upload nach Nextcloud einrichten |
 | [docs/power-automate-flow.md](docs/power-automate-flow.md) | Upload nach SharePoint über Power Automate |
 | [docs/RELEASE.md](docs/RELEASE.md) | Release mit APK veröffentlichen (Workflow, Versionsschema) |
