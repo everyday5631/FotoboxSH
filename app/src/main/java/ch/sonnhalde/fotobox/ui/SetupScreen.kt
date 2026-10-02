@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -106,6 +107,7 @@ fun SetupScreen(state: UiState, actions: Actions) {
                 }
                 SetupTab.Printer -> {
                     ConnectionSection(state, actions.onConfigChange, actions.onCheckConnection, actions.onTestPrinter)
+                    PrinterWifiSection(state, actions)
                     PrintFormatSection(state, actions)
                 }
                 SetupTab.Queue -> {
@@ -156,23 +158,43 @@ private fun <T> ChoiceRow(label: String, options: List<Pair<String, T>>, selecte
     }
 }
 
+/** Zum Drucken automatisch ins Drucker-WLAN wechseln (und danach zurueck ins Internet-WLAN fuer den QR-Code). */
+@Composable
+private fun PrinterWifiSection(state: UiState, actions: Actions) {
+    val cfg = state.config
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionTitle("Drucker", "Drucker-WLAN automatisch")
+        Text(
+            "Für den Fall, dass das Tablet im Internet-WLAN (z. B. SH-GAST) den Drucker nicht sieht: Beim Drucken verbindet sich die App " +
+                "kurz mit dem WLAN des Druckers und danach wieder zurück. Beim ersten Mal fragt Android um Erlaubnis.",
+            color = Sonn.Stone, fontSize = 13.sp,
+        )
+        SettingSwitch("Zum Drucken ins Drucker-WLAN wechseln", cfg.printerWifiSwitch) { actions.onConfigQuiet(cfg.copy(printerWifiSwitch = it)) }
+        SonnField("Name des Drucker-WLANs (z. B. WCMPLUS-aed)", cfg.printerWifiSsid, KeyboardType.Text) { actions.onConfigQuiet(cfg.copy(printerWifiSsid = it)) }
+        SonnField("Passwort des Drucker-WLANs", cfg.printerWifiPassword, KeyboardType.Password) { actions.onConfigQuiet(cfg.copy(printerWifiPassword = it)) }
+        SonnField("Adresse des Druckers im Drucker-WLAN", cfg.printerWifiHost, KeyboardType.Uri) { actions.onConfigQuiet(cfg.copy(printerWifiHost = it)) }
+        SonnButton("Drucker-WLAN testen", primary = false, onClick = actions.onTestPrinterWifi)
+        state.printerTest?.let { Text(it, color = Sonn.Stone, fontSize = 13.sp) }
+    }
+}
+
 /** Druckformat wie im Android-Dialog: Papier, Skalierung, Ausrichtung, Drehung; mit Testdruck zum Ausprobieren. */
 @Composable
 private fun PrintFormatSection(state: UiState, actions: Actions) {
     val cfg = state.config
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SectionTitle("Drucker", "Druckformat")
-        // Papierformate beim Oeffnen vom Drucker laden und zum Antippen anbieten.
-        LaunchedEffect(Unit) { if (state.printerMedia.isEmpty()) actions.onTestPrinter() }
-        if (state.printerMedia.isNotEmpty()) {
-            ChoiceRow("Papierformat (vom Drucker)", listOf("Automatisch (4x6)" to "") + state.printerMedia.map { it to it }, cfg.printMedia) {
-                actions.onConfigQuiet(cfg.copy(printMedia = it))
+        // Beim WCMPlus gibt es pro Papierformat eine eigene Druckwarteschlange (z. B. QW410-4x6 und QW410-4x4).
+        LaunchedEffect(Unit) { if (state.printerQueues.isEmpty()) actions.onTestPrinter() }
+        if (state.printerQueues.isNotEmpty()) {
+            ChoiceRow("Druckformat (Warteschlange des Druckers)", listOf("Automatisch (4x6)" to "") + state.printerQueues.map { it to it }, cfg.printerQueue) {
+                actions.onConfigQuiet(cfg.copy(printerQueue = it))
             }
         } else {
-            Text("Papierformate werden vom Drucker geladen … (Drucker eingeschaltet und im selben WLAN?)", color = Sonn.Stone, fontSize = 13.sp)
-            SonnButton("Formate vom Drucker laden", primary = false, onClick = actions.onTestPrinter)
+            Text("Druckwarteschlangen werden gesucht … (Drucker eingeschaltet und im selben WLAN?)", color = Sonn.Stone, fontSize = 13.sp)
+            SonnButton("Erneut suchen", primary = false, onClick = actions.onTestPrinter)
         }
-        SonnField("Papierformat von Hand (IPP-Name, leer = oben gewählt)", cfg.printMedia, KeyboardType.Text) { actions.onConfigQuiet(cfg.copy(printMedia = it)) }
+        Text("Das Papierformat steckt im Namen der Warteschlange (4x6 = 10 x 15 cm).", color = Sonn.Stone, fontSize = 12.sp)
         ChoiceRow("Skalierung", listOf("Einpassen" to "fit", "Füllen (zuschneiden)" to "fill", "Drucker entscheidet" to "auto"), cfg.printScaling) {
             actions.onConfigQuiet(cfg.copy(printScaling = it))
         }
@@ -205,6 +227,14 @@ private fun UploadSection(state: UiState, actions: Actions) {
             SonnField("Upload-Link (Power-Automate-Flow)", cfg.flowUrl, KeyboardType.Uri) { actions.onConfigQuiet(cfg.copy(flowUrl = it)) }
         }
         SonnButton("Upload testen", primary = false, onClick = actions.onTestUpload)
+        state.uploadTestText?.let {
+            Text(it, color = if (it.startsWith("✗")) Sonn.Error else Sonn.Navy, fontSize = 14.sp)
+        }
+        state.uploadTestQr?.let { qr ->
+            Box(Modifier.border(1.dp, Sonn.Line, MaterialShape).background(androidx.compose.ui.graphics.Color.White).padding(10.dp)) {
+                Image(qr.asImageBitmap(), contentDescription = "QR-Code zum Testfoto", modifier = Modifier.size(200.dp))
+            }
+        }
     }
 }
 

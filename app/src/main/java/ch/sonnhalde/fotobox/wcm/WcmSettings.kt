@@ -27,6 +27,13 @@ data class WcmConfig(
     val zoomRatio: Float = 1f,
     /** Druckformat: IPP-Papiername (leer = automatisch «4x6»), Skalierung, Ausrichtung und Drehung des Bildes. */
     val printMedia: String = "",
+    /** Gewuenschte Druckwarteschlange (Teil des Namens, z. B. «4x6»); leer = automatisch 4x6. */
+    val printerQueue: String = "",
+    /** Zum Drucken automatisch ins Drucker-WLAN (WCMPlus-Hotspot) wechseln und danach zurueck ins Internet-WLAN. */
+    val printerWifiSwitch: Boolean = false,
+    val printerWifiSsid: String = "",
+    val printerWifiPassword: String = "dnp12345",
+    val printerWifiHost: String = "192.168.4.1",
     val printScaling: String = "fit",      // fit | fill | auto (Drucker entscheidet)
     val printOrientation: String = "auto", // auto | landscape | portrait | none
     val printRotation: Int = 0,            // 0 | 90 | 180 | 270 Grad vor dem Senden
@@ -61,6 +68,11 @@ class WcmSettings(context: Context) {
         exposureIndex = prefs.getInt("exposureIndex", 0),
         zoomRatio = prefs.getFloat("zoomRatio", 1f),
         printMedia = prefs.getString("printMedia", "").orEmpty(),
+        printerQueue = prefs.getString("printerQueue", "").orEmpty(),
+        printerWifiSwitch = prefs.getBoolean("printerWifiSwitch", false),
+        printerWifiSsid = prefs.getString("printerWifiSsid", "").orEmpty(),
+        printerWifiPassword = prefs.getString("printerWifiPassword", "dnp12345").orEmpty(),
+        printerWifiHost = prefs.getString("printerWifiHost", "192.168.4.1").orEmpty(),
         printScaling = prefs.getString("printScaling", "fit").orEmpty(),
         printOrientation = prefs.getString("printOrientation", "auto").orEmpty(),
         printRotation = prefs.getInt("printRotation", 0),
@@ -87,6 +99,11 @@ class WcmSettings(context: Context) {
             .putInt("exposureIndex", config.exposureIndex)
             .putFloat("zoomRatio", config.zoomRatio)
             .putString("printMedia", config.printMedia.trim())
+            .putString("printerQueue", config.printerQueue.trim())
+            .putBoolean("printerWifiSwitch", config.printerWifiSwitch)
+            .putString("printerWifiSsid", config.printerWifiSsid.trim())
+            .putString("printerWifiPassword", config.printerWifiPassword)
+            .putString("printerWifiHost", config.printerWifiHost.trim())
             .putString("printScaling", config.printScaling)
             .putString("printOrientation", config.printOrientation)
             .putInt("printRotation", config.printRotation)

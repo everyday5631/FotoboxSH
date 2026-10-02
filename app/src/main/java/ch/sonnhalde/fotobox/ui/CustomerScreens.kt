@@ -118,7 +118,7 @@ fun ResultScreen(state: UiState, actions: Actions, onAdmin: () -> Unit) {
             SonnButton("DRUCKEN", primary = true, onClick = actions.onPrint)
             when (val pr = state.print) {
                 PrintState.Idle -> Unit
-                PrintState.Printing -> Text("Foto wird gedruckt …", color = Sonn.Stone, fontSize = 16.sp)
+                is PrintState.Printing -> Text(pr.stage, color = Sonn.Stone, fontSize = 16.sp)
                 is PrintState.Done -> Text("Ihr Foto wird gedruckt.", color = Sonn.Ok, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 is PrintState.Failed -> {
                     Notice("Drucken nicht möglich. ${pr.reason}")

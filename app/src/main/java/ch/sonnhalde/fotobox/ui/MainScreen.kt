@@ -44,7 +44,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -85,6 +87,7 @@ class Actions(
     val onExitApp: () -> Unit,
     val onOpenWifi: () -> Unit,
     val onTestPrint: () -> Unit,
+    val onTestPrinterWifi: () -> Unit,
     val onTestUpload: () -> Unit,
     val onRetryQueue: () -> Unit,
     val onClearQueue: () -> Unit,
@@ -287,7 +290,9 @@ internal fun SonnField(label: String, value: String, keyboard: KeyboardType, sin
         singleLine = singleLine,
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialShape,
-        keyboardOptions = KeyboardOptions(keyboardType = keyboard),
+        // Keine Gross-Schreibung/Autokorrektur (Benutzernamen, Adressen); Passwoerter verdeckt.
+        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrect = false, keyboardType = keyboard),
+        visualTransformation = if (keyboard == KeyboardType.Password || keyboard == KeyboardType.NumberPassword) PasswordVisualTransformation() else VisualTransformation.None,
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = Sonn.Navy,
             unfocusedBorderColor = Sonn.Line,

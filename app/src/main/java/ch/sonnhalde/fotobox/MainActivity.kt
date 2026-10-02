@@ -47,6 +47,7 @@ class MainActivity : ComponentActivity() {
                         onExitApp = { finishAffinity() },
                         onOpenWifi = { startActivity(Intent(android.provider.Settings.ACTION_WIFI_SETTINGS)) },
                         onTestPrint = vm::testPrint,
+                        onTestPrinterWifi = vm::testPrinterWifi,
                         onTestUpload = vm::testUpload,
                         onRetryQueue = vm::retryQueue,
                         onClearQueue = vm::clearQueue,
