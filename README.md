@@ -4,6 +4,12 @@ Android-App für eine Fotobox am Tablet: Gäste lösen ein Foto mit Timer aus, b
 und können das Foto auf einem **DNP QW410** (mit WCMPlus-WLAN-Modul) **ausdrucken**. Entwickelt für das Pflege- und
 Betreuungszentrum Sonnhalde AG als Ersatz für die UpReach-Fotobox. Die App braucht keine Cloud eines Herstellers.
 
+## So sieht es aus
+
+| Timer vor dem Foto | Tablet auf dem Drucker | Fertiger Abzug |
+|---|---|---|
+| ![Countdown-Bildschirm mit Timer](docs/bilder/fotobox-timer.jpg) | ![Tablet mit der App auf dem DNP QW410](docs/bilder/fotobox-tablet-am-drucker.jpg) | ![Abzug wird aus dem Drucker genommen](docs/bilder/fotobox-abzug.jpg) |
+
 Dokumentation für Dritte:
 
 | Dokument | Inhalt |
