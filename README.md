@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/bilder/sonnhalde-logo.png" alt="Sonnhalde, Pflege- und Betreuungszentrum" width="320"></p>
+
 # Sonnhalde Fotobox
 
 Android-App für eine Fotobox am Tablet: Gäste lösen ein Foto mit Timer aus, bekommen einen **QR-Code zum Herunterladen**
