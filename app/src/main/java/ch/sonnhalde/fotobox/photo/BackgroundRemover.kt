@@ -3,8 +3,6 @@ package ch.sonnhalde.fotobox.photo
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
-import android.graphics.PorterDuff
-import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.segmentation.Segmentation
@@ -21,7 +19,7 @@ object BackgroundRemover {
     /** Laengste Seite des Bildes, auf dem die Personen erkannt werden (schneller, die Maske wird danach hochskaliert). */
     private const val SEGMENT_SIDE = 1024
     /** Laengste Seite des Ergebnisses; das Foto ist danach ohnehin auf 1800 px Breite beschraenkt. */
-    private const val MAX_SIDE = 2400
+    private const val MAX_SIDE = 2000
 
     private val segmenter by lazy {
         Segmentation.getClient(
@@ -41,23 +39,42 @@ object BackgroundRemover {
         val w = person.width
         val h = person.height
 
-        // Person freistellen: Alpha des Fotos mit der (weich hochskalierten) Maske multiplizieren.
-        val cutout = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        val cutCanvas = Canvas(cutout)
-        cutCanvas.drawBitmap(person, 0f, 0f, null)
-        val maskPaint = Paint(Paint.FILTER_BITMAP_FLAG).apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN) }
-        cutCanvas.drawBitmap(mask, null, Rect(0, 0, w, h), maskPaint)
-
-        // Hintergrund formatfuellend zuschneiden (Cover), dann die Person darueber.
-        val out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(out)
+        // Hintergrund formatfuellend zuschneiden (Cover) auf die Groesse des Fotos.
+        val bg = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val scale = maxOf(w / background.width.toFloat(), h / background.height.toFloat())
         val srcW = (w / scale).toInt().coerceIn(1, background.width)
         val srcH = (h / scale).toInt().coerceIn(1, background.height)
         val src = Rect((background.width - srcW) / 2, (background.height - srcH) / 2, (background.width + srcW) / 2, (background.height + srcH) / 2)
-        canvas.drawBitmap(background, src, Rect(0, 0, w, h), Paint(Paint.FILTER_BITMAP_FLAG))
-        canvas.drawBitmap(cutout, 0f, 0f, Paint(Paint.FILTER_BITMAP_FLAG))
+        Canvas(bg).drawBitmap(background, src, Rect(0, 0, w, h), Paint(Paint.FILTER_BITMAP_FLAG))
+
+        // Maske weich auf die Groesse des Fotos hochskalieren.
+        val maskFull = Bitmap.createScaledBitmap(mask, w, h, true)
+
+        // Pixelweise mischen, ohne Porter-Duff-Modi von Android: Ergebnis = Person * Maske + Hintergrund * (1 - Maske).
+        val out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val personRow = IntArray(w)
+        val bgRow = IntArray(w)
+        val maskRow = IntArray(w)
+        for (y in 0 until h) {
+            person.getPixels(personRow, 0, w, 0, y, w, 1)
+            bg.getPixels(bgRow, 0, w, 0, y, w, 1)
+            maskFull.getPixels(maskRow, 0, w, 0, y, w, 1)
+            for (x in 0 until w) {
+                personRow[x] = blend(personRow[x], bgRow[x], maskRow[x] ushr 24)
+            }
+            out.setPixels(personRow, 0, w, 0, y, w, 1)
+        }
         return Replacement(out, share)
+    }
+
+    /** Mischt zwei Farben (ARGB, deckend): [alpha] 255 = nur [front], 0 = nur [back]. */
+    internal fun blend(front: Int, back: Int, alpha: Int): Int {
+        val a = alpha.coerceIn(0, 255)
+        val inv = 255 - a
+        val r = (((front shr 16) and 0xFF) * a + ((back shr 16) and 0xFF) * inv + 127) / 255
+        val g = (((front shr 8) and 0xFF) * a + ((back shr 8) and 0xFF) * inv + 127) / 255
+        val bl = ((front and 0xFF) * a + (back and 0xFF) * inv + 127) / 255
+        return (0xFF shl 24) or (r shl 16) or (g shl 8) or bl
     }
 
     /**
