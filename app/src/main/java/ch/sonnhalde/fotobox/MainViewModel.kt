@@ -71,6 +71,8 @@ data class UiState(
     val bgVersion: Int = 0,
     /** Zaehler, der sich erhoeht, wenn Foto-Hintergruende hinzukommen oder geloescht werden (Vorschaubilder neu laden). */
     val backgroundsVersion: Int = 0,
+    /** Hintergrund, den der Gast beim Fotografieren gewaehlt hat («» = Original); null = Standard aus den Einstellungen. */
+    val guestBackgroundId: String? = null,
     /** Fotos, die noch nicht nach SharePoint hochgeladen werden konnten. */
     val queueCount: Int = 0,
     val printerTest: String? = null,
@@ -218,6 +220,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Gast waehlt beim Fotografieren einen Hintergrund (gilt bis zurueck zum Startbildschirm). */
+    fun selectBackground(id: String) = _state.update { it.copy(guestBackgroundId = id) }
+
     fun deleteBackground(id: String) {
         viewModelScope.launch {
             val ok = withContext(Dispatchers.IO) { backgrounds.delete(id) }
@@ -251,7 +256,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         photoJpeg = null
         digitalJpeg = null
         _state.update {
-            it.copy(screen = Screen.Welcome, photo = null, digital = null, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, savedUri = null, message = null)
+            it.copy(screen = Screen.Welcome, guestBackgroundId = null, photo = null, digital = null, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, savedUri = null, message = null)
         }
     }
 
@@ -270,7 +275,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 runCatching {
                     val captured = decodeUpright(file)
                     val config = _state.value.config
-                    val upright = applyBackground(captured, config.backgroundId)
+                    val backgroundId = if (config.backgroundGuestChoice) _state.value.guestBackgroundId ?: config.backgroundId else config.backgroundId
+                    val upright = applyBackground(captured, backgroundId)
                     val style = BannerStyle.from(config)
                     val print = PhotoComposer.compose(getApplication(), upright, style)
                     val digital = PhotoComposer.composeDigital(getApplication(), upright, style)

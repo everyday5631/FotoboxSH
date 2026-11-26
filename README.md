@@ -41,8 +41,8 @@ Dokumentation für Dritte:
   App zum Drucken kurz ins Drucker-WLAN und danach zurück.
 - **Kiosk:** Vollbild, Zurück-Taste gesperrt, Bildschirm bleibt an; Beenden nur mit PIN.
 
-- **Foto-Hintergrund** (wie bei Teams): Im Setup (Reiter Konfiguration, «Foto – Hintergrund») wählt die Betreiberin bzw. der Betreiber ein Bild aus,
-  z. B. einen Wald. Die Personen werden auf dem Tablet freigestellt (ML Kit, ohne Internet, nichts wird hochgeladen) und vor dieses Bild gesetzt.
+- **Foto-Hintergrund** (wie bei Teams): Die Betreiberin bzw. der Betreiber legt im Setup (Reiter Konfiguration, «Foto – Hintergrund») die Bilder fest
+  (z. B. einen Wald) und wählt die Vorauswahl; die Gäste tippen auf dem Kamera-Bildschirm unten auf ein Bild («Hintergrund wählen», abschaltbar). Die Personen werden auf dem Tablet freigestellt (ML Kit, ohne Internet, nichts wird hochgeladen) und vor dieses Bild gesetzt.
   Mitgeliefert sind Platzhalter in den Sonnhalde-Farben; eigene Bilder lassen sich aus der Galerie hinzufügen und löschen. Das Live-Bild zeigt
   weiterhin den echten Hintergrund, der neue erscheint im fertigen Foto (Druck und QR-Code). Schlägt die Erkennung fehl, wird das Originalfoto verwendet.
 

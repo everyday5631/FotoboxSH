@@ -372,6 +372,12 @@ private fun BackgroundSection(state: UiState, actions: Actions) {
             val custom = items.firstOrNull { it.id == selected && !it.builtIn }
             if (custom != null) SonnButton("Ausgewähltes Bild löschen", primary = false, onClick = { actions.onDeleteBackground(custom.id) })
         }
+        SettingSwitch("Gäste wählen den Hintergrund beim Fotografieren", cfg.backgroundGuestChoice) { actions.onConfigQuiet(cfg.copy(backgroundGuestChoice = it)) }
+        Text(
+            if (cfg.backgroundGuestChoice) "Das Bild oben ist die Vorauswahl; Gäste können auf dem Kamera-Bildschirm ein anderes antippen."
+            else "Gäste sehen keine Auswahl; es gilt immer das Bild oben.",
+            color = Sonn.Stone, fontSize = 12.sp,
+        )
         Text("Die mitgelieferten Bilder sind Platzhalter in den Sonnhalde-Farben; eigene Bilder lassen sich hinzufügen und wieder löschen.", color = Sonn.Stone, fontSize = 12.sp)
     }
 }
