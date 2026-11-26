@@ -33,9 +33,11 @@ object BackgroundRemover {
     }
 
     /** Foto mit Personen vor [background]. Wirft eine Ausnahme, wenn die Erkennung fehlschlaegt (Aufrufer nimmt dann das Originalfoto). */
-    suspend fun replace(photo: Bitmap, background: Bitmap): Bitmap {
+    class Replacement(val image: Bitmap, /** Anteil des Bildes, der als Person erkannt wurde (0..1). */ val personShare: Float)
+
+    suspend fun replace(photo: Bitmap, background: Bitmap): Replacement {
         val person = downscale(photo, MAX_SIDE)
-        val mask = segmentMask(person)
+        val (mask, share) = segmentMask(person)
         val w = person.width
         val h = person.height
 
@@ -55,11 +57,11 @@ object BackgroundRemover {
         val src = Rect((background.width - srcW) / 2, (background.height - srcH) / 2, (background.width + srcW) / 2, (background.height + srcH) / 2)
         canvas.drawBitmap(background, src, Rect(0, 0, w, h), Paint(Paint.FILTER_BITMAP_FLAG))
         canvas.drawBitmap(cutout, 0f, 0f, Paint(Paint.FILTER_BITMAP_FLAG))
-        return out
+        return Replacement(out, share)
     }
 
     /** Maske als ALPHA_8-Bild: 255 = Person, 0 = Hintergrund, mit weichem Uebergang am Rand. */
-    private suspend fun segmentMask(photo: Bitmap): Bitmap {
+    private suspend fun segmentMask(photo: Bitmap): Pair<Bitmap, Float> {
         val small = downscale(photo, SEGMENT_SIDE)
         val result = suspendCancellableCoroutine { cont ->
             segmenter.process(InputImage.fromBitmap(small, 0))
@@ -72,14 +74,17 @@ object BackgroundRemover {
         buffer.rewind()
         val floats = buffer.asFloatBuffer()
         val bytes = ByteArray(mw * mh)
+        var sum = 0.0
         for (i in bytes.indices) {
             // Konfidenz «Person» 0..1; unter 0.35 ganz Hintergrund, ueber 0.75 ganz Person, dazwischen weich.
             val a = ((floats.get(i) - LOW) / (HIGH - LOW)).coerceIn(0f, 1f)
-            bytes[i] = (a * a * (3 - 2 * a) * 255f).toInt().toByte()
+            val soft = a * a * (3 - 2 * a)
+            sum += soft
+            bytes[i] = (soft * 255f).toInt().toByte()
         }
         val mask = Bitmap.createBitmap(mw, mh, Bitmap.Config.ALPHA_8)
         mask.copyPixelsFromBuffer(java.nio.ByteBuffer.wrap(bytes))
-        return mask
+        return mask to (sum / bytes.size).toFloat()
     }
 
     private fun downscale(bmp: Bitmap, maxSide: Int): Bitmap {

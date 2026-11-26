@@ -24,7 +24,7 @@ Oben die Reiter, unten der grosse **Start**-Knopf, oben rechts **⏻** (App been
 | Bereich | Inhalt |
 |---|---|
 | **Foto – Banner unten** | Feld «Text im Banner rechts» (max. 28 Zeichen, Zähler und **Vorschau** darunter) |
-| **Foto – Hintergrund** | Auswahl «Kein Hintergrund» (echter Hintergrund bleibt) oder ein Bild; **Bild hinzufügen (Galerie)**, **Ausgewähltes Bild löschen** (nur eigene Bilder). Schalter «Gäste wählen den Hintergrund beim Fotografieren». Die Personen werden freigestellt und vor das Bild gesetzt; sichtbar erst im fertigen Foto, nicht im Live-Bild |
+| **Foto – Hintergrund** | Auswahl «Kein Hintergrund» (echter Hintergrund bleibt) oder ein Bild; **Bild hinzufügen (Galerie)**, **Ausgewähltes Bild löschen** (nur eigene Bilder). Schalter «Gäste wählen den Hintergrund beim Fotografieren». Die Personen werden freigestellt und vor das Bild gesetzt; im Live-Bild nur als halbtransparente Andeutung, freigestellt erst im fertigen Foto. Klappt die Freistellung nicht oder wird keine Person erkannt, steht ein Hinweis oben auf dem Ergebnis-Bildschirm |
 | **Retail-Modus – Startbildschirm** | «Überschrift», «Text des Start-Knopfs», **Hintergrundbild wählen** / **Entfernen** |
 | **Ablauf – Timer und Druck** | «Timer vor dem Foto»: **3 s / 5 s / 10 s**; Schalter «Foto automatisch drucken (1 Abzug)» |
 | **Download – Upload-Ziel für QR-Code** | Ziel «SharePoint (Power Automate)» oder «Nextcloud» mit den jeweiligen Feldern, **Upload testen** (zeigt Link und QR-Code zum Testfoto) |

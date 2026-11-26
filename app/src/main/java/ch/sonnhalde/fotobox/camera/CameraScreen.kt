@@ -166,6 +166,14 @@ fun CameraScreen(
         }
     }
 
+    val library = remember { BackgroundLibrary(context) }
+    val items = remember(backgroundsVersion) { library.all() }
+    val selected = selectedBackground.takeIf { id -> items.any { it.id == id } }.orEmpty()
+    // Halbtransparente Andeutung des gewaehlten Hintergrunds ueber dem Live-Bild (kein echtes Freistellen im Live-Bild).
+    val overlay by produceState<android.graphics.Bitmap?>(null, selected, backgroundsVersion) {
+        value = if (selected.isEmpty()) null else withContext(Dispatchers.IO) { library.load(selected, 1280) }
+    }
+
     Box(
         Modifier.fillMaxSize().background(Sonn.NavyDeep)
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { shoot() },
@@ -178,6 +186,11 @@ fun CameraScreen(
                 color = Sonn.Cream, fontSize = 20.sp, textAlign = TextAlign.Center,
                 modifier = Modifier.align(Alignment.Center).padding(24.dp),
             )
+        }
+
+        // Vorschau: gewaehlter Hintergrund halbtransparent ueber dem Live-Bild. Beruehrungen gehen durch (Tippen loest weiter aus).
+        overlay?.let {
+            Image(it.asImageBitmap(), contentDescription = null, contentScale = ContentScale.Crop, alpha = 0.5f, modifier = Modifier.fillMaxSize())
         }
 
         // Oben links: Logo (langer Druck = Verwaltung) und Zurueck-Knopf
@@ -205,10 +218,7 @@ fun CameraScreen(
 
         // Unten Mitte: Hintergrund waehlen (wie bei Teams); das Ergebnis erscheint im fertigen Foto.
         if (showBackgroundPicker && countdown == null) {
-            val library = remember { BackgroundLibrary(context) }
-            val items = remember(backgroundsVersion) { library.all() }
             if (items.isNotEmpty()) {
-                val selected = selectedBackground.takeIf { id -> items.any { it.id == id } }.orEmpty()
                 Column(
                     Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 16.dp)
                         .clip(RoundedCornerShape(12.dp)).background(Color(0xB3000000)).padding(10.dp)
@@ -217,6 +227,7 @@ fun CameraScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text("Hintergrund wählen", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Text("Vorschau nur angedeutet; im Foto stehen Sie vor dem Bild.", color = Color(0xCCFFFFFF), fontSize = 12.sp)
                     Row(
                         Modifier.padding(top = 8.dp).widthIn(max = 640.dp).horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),

@@ -59,7 +59,8 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
 - Schrift: **Arial ist die offizielle Schrift des Corporate Designs** (Nutzerperson). Der Vermerk im Design-Repo `Se-Design` (Definitionen-Blatt nennt Open Sans/Source Serif Pro) gilt damit als geklärt.
 - Kein Video/GIF-Hintergrund, kein E-Mail-Versand (UpReach hat sie).
 - Foto-Hintergrund: Die Freistellung läuft erst nach der Aufnahme (ML Kit `segmentation-selfie`, Modell in der App, einige hundert ms bis wenige Sekunden je nach Tablet).
-  Das Live-Bild der Kamera zeigt den echten Hintergrund. Bei Fehlern der Erkennung oder fehlendem Bild bleibt das Originalfoto. Haare, Hände und Gruppen
+  Im Live-Bild liegt der gewählte Hintergrund nur halbtransparent über der Kamera (Andeutung, keine Freistellung). Bei Fehlern der Erkennung oder fehlendem Bild bleibt das Originalfoto;
+  der Grund steht als Hinweis auf dem Ergebnis-Bildschirm (`UiState.backgroundNote`) und im Logcat (Tag `Fotobox`, auch Personenanteil), ebenso «keine Person erkannt» (<1 %) und «ganzes Bild als Person» (>97 %). Haare, Hände und Gruppen
   sind die Schwachstellen des Modells; Randqualität nur auf dem Tablet beurteilbar.
 
 ## Offene Punkte (Reihenfolge nach Wunsch der Nutzerperson)

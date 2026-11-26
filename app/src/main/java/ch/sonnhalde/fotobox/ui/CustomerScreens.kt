@@ -131,6 +131,7 @@ fun ResultScreen(state: UiState, actions: Actions, onAdmin: () -> Unit) {
 
     Column(Modifier.fillMaxSize().background(Sonn.Cream)) {
         SonnhaldeBanner(title = "Ihr Foto", onLongPress = onAdmin)
+        state.backgroundNote?.let { Notice(it) }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             if (landscape) {
                 Row(

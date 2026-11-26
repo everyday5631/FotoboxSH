@@ -4,6 +4,7 @@ import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
+import android.util.Log
 import android.media.ExifInterface
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
@@ -73,6 +74,8 @@ data class UiState(
     val backgroundsVersion: Int = 0,
     /** Hintergrund, den der Gast beim Fotografieren gewaehlt hat («» = Original); null = Standard aus den Einstellungen. */
     val guestBackgroundId: String? = null,
+    /** Hinweis zum Foto-Hintergrund auf dem Ergebnis-Bildschirm, z. B. wenn die Freistellung nicht geklappt hat. */
+    val backgroundNote: String? = null,
     /** Fotos, die noch nicht nach SharePoint hochgeladen werden konnten. */
     val queueCount: Int = 0,
     val printerTest: String? = null,
@@ -88,6 +91,7 @@ data class UiState(
 )
 
 const val MAX_COPIES = 3
+private const val TAG = "Fotobox"
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val settings = WcmSettings(app)
@@ -236,10 +240,35 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * Erkennung scheitert, bleibt das Originalfoto: ein Gast verliert nie sein Foto.
      */
     private suspend fun applyBackground(photo: Bitmap, backgroundId: String): Bitmap {
+        backgroundNote = null
         if (backgroundId.isBlank()) return photo
-        val background = backgrounds.load(backgroundId) ?: return photo
-        return runCatching { BackgroundRemover.replace(photo, background) }.getOrDefault(photo)
+        val background = backgrounds.load(backgroundId)
+        if (background == null) {
+            Log.w(TAG, "Hintergrund $backgroundId nicht lesbar")
+            backgroundNote = "Hintergrund konnte nicht geladen werden, es gilt das Originalfoto."
+            return photo
+        }
+        return runCatching { BackgroundRemover.replace(photo, background) }.fold(
+            onSuccess = { r ->
+                Log.i(TAG, "Hintergrund ersetzt, Personenanteil %.3f".format(r.personShare))
+                // Fast nichts oder fast alles als Person erkannt: fuer die Fehlersuche sichtbar machen.
+                backgroundNote = when {
+                    r.personShare < 0.01f -> "Keine Person erkannt: das Foto zeigt nur den Hintergrund."
+                    r.personShare > 0.97f -> "Der Hintergrund wurde nicht erkannt (ganzes Bild als Person): das Foto bleibt fast unverändert."
+                    else -> null
+                }
+                r.image
+            },
+            onFailure = { e ->
+                Log.e(TAG, "Hintergrund ersetzen fehlgeschlagen", e)
+                backgroundNote = "Hintergrund konnte nicht ersetzt werden (${e.javaClass.simpleName}: ${e.message}), es gilt das Originalfoto."
+                photo
+            },
+        )
     }
+
+    /** Ergebnis des letzten Hintergrund-Schritts (wird beim Anzeigen des Ergebnisses in den Zustand uebernommen). */
+    private var backgroundNote: String? = null
 
     fun startBackgroundFile() = File(getApplication<Application>().filesDir, "start_bg.jpg")
 
@@ -256,7 +285,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         photoJpeg = null
         digitalJpeg = null
         _state.update {
-            it.copy(screen = Screen.Welcome, guestBackgroundId = null, photo = null, digital = null, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, savedUri = null, message = null)
+            it.copy(screen = Screen.Welcome, guestBackgroundId = null, backgroundNote = null, photo = null, digital = null, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, savedUri = null, message = null)
         }
     }
 
@@ -290,7 +319,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     photoJpeg = jpegs.first
                     digitalJpeg = jpegs.second
                     _state.update {
-                        it.copy(screen = Screen.Result, photo = bmp, digital = digital, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, savedUri = null, message = null)
+                        it.copy(screen = Screen.Result, backgroundNote = backgroundNote, photo = bmp, digital = digital, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, savedUri = null, message = null)
                     }
                     val upload = startUpload()
                     // Beim Wechsel ins Drucker-WLAN zuerst hochladen (braucht Internet), dann drucken.
