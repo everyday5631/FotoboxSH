@@ -4,7 +4,7 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
 
 > **Referenzstand:** `v0.1.36` ist die letzte Version, die vollständig und fehlerfrei funktioniert hat (Angabe der Auftraggeberseite).
 > Alles danach (z. B. das anpassbare Banner mit Text links/rechts, Farben, eigenem Logo, Transparenz und Banner auf der digitalen
-> Version) ist nur gebaut, aber noch **nicht auf dem Tablet getestet**. Bei Fehlern ist `v0.1.36` der Rückfallstand.
+> Version, Foto-Hintergrund mit Personen-Freistellung, neues App-Icon) ist nur gebaut, aber noch **nicht auf dem Tablet getestet**. Bei Fehlern ist `v0.1.36` der Rückfallstand.
 
 ## Ablauf der App
 
@@ -21,6 +21,7 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
 |---|---|
 | `kiosk` | Device-Admin-Receiver, Lock-Task/Vollbild, PIN. Voller Kiosk nur als Device Owner (`adb shell dpm set-device-owner ch.sonnhalde.fotobox/.kiosk.AdminReceiver`), sonst «Bildschirm fixieren». |
 | `camera` | CameraX: Retail-Kamera, Setup-Panel (Front/Rück, Belichtung, Zoom). Kamera nur beim Verlassen des Bildschirms freigeben, **nicht** an State koppeln (sonst «Not bound to a valid Camera»). |
+| `photo` | `PhotoComposer` (Druck- und digitale Version, Banner), `BackgroundLibrary` (mitgelieferte Platzhalter in `app/src/main/assets/backgrounds/`, eigene Bilder in `files/backgrounds/`), `BackgroundRemover` (ML-Kit-Selfie-Segmentierung, Person vor gewähltes Bild setzen). Einstellung: `WcmConfig.backgroundId` (`asset:…` / `file:…`, leer = aus). |
 | `print` | `Ipp` (Codec), `IppPrinter` (Suche, Auswahl der Warteschlange, Druck), `PdfWrap` (JPEG → PDF 4x6), `PrinterNetwork` (WLAN-Wechsel), `PhotoPrinter` (Android-Druckdialog als Ausweg). |
 | `upload` | `NextcloudUploader` (WebDAV + OCS-Freigabe, Schrittmeldungen 1/4–4/4), `SharePointUploader` (Power-Automate-Flow, Vertrag in `docs/power-automate-flow.md`), `UploadQueue` (fehlgeschlagene Fotos). |
 | `wcm` | `WcmConfig`/`WcmSettings` (alle Einstellungen), `WcmClient` (Erreichbarkeit des Portals). |
@@ -40,6 +41,7 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
 
 ## Entscheidungen
 
+- App-Icon: Sonnhalde-Bildmarke (gelb) auf Dunkelblau `#233446`, Pfad aus dem Design-System-Repo `everyday5631/Se-Design` (`brand/vektor/Sonnhalde-Bildmarke-gelb.svg`), mit Themed-Icon-Variante. Das Repo enthält alle Branding-Dateien der Sonnhalde (Logos, Farben, Vorlagen), aber keine Landschaftsfotos.
 - Festes Debug-Zertifikat (`app/debug.keystore`): Updates über die installierte App möglich. Ältere Builds vorher deinstallieren.
 - Versionsanzeige «Version 0.1.N (Commit)» aus CI (N = Lauf-Nummer, Commit = echter Head, bei PR-Builds nicht der Merge-Commit).
 - Nextcloud-Upload mit **Konto-ID und App-Passwort**; Power Automate (HTTP-Trigger = Premium-Connector) bleibt Option für die Firma.
@@ -49,7 +51,10 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
 
 - WLAN-Wechsel: Android fragt beim Verbinden um Erlaubnis; im gesperrten Kiosk kann diese Systemabfrage hakeln. Trennt das Internet kurz.
 - Zugangsdaten (Nextcloud-App-Passwort, Flow-URL, WLAN-Passwort, PIN) liegen im App-Speicher (SharedPreferences, unverschlüsselt). Eigene Zugänge mit minimalen Rechten verwenden.
-- Kein Video/GIF-Hintergrund, kein E-Mail-Versand, keine Hintergrund-Freisteller (UpReach hat sie).
+- Kein Video/GIF-Hintergrund, kein E-Mail-Versand (UpReach hat sie).
+- Foto-Hintergrund: Die Freistellung läuft erst nach der Aufnahme (ML Kit `segmentation-selfie`, Modell in der App, einige hundert ms bis wenige Sekunden je nach Tablet).
+  Das Live-Bild der Kamera zeigt den echten Hintergrund. Bei Fehlern der Erkennung oder fehlendem Bild bleibt das Originalfoto. Haare, Hände und Gruppen
+  sind die Schwachstellen des Modells; Randqualität nur auf dem Tablet beurteilbar.
 
 ## Offene Punkte (Reihenfolge nach Wunsch der Nutzerperson)
 

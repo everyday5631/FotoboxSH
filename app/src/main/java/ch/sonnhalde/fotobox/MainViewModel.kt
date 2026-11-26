@@ -9,6 +9,8 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import ch.sonnhalde.fotobox.kiosk.Kiosk
+import ch.sonnhalde.fotobox.photo.BackgroundLibrary
+import ch.sonnhalde.fotobox.photo.BackgroundRemover
 import ch.sonnhalde.fotobox.photo.BannerStyle
 import ch.sonnhalde.fotobox.photo.PhotoComposer
 import ch.sonnhalde.fotobox.print.IppPrinter
@@ -67,6 +69,8 @@ data class UiState(
     val copies: Int = 1,
     /** Zaehler, der sich beim Wechsel des Startbildschirm-Hintergrunds erhoeht (zum Neuladen). */
     val bgVersion: Int = 0,
+    /** Zaehler, der sich erhoeht, wenn Foto-Hintergruende hinzukommen oder geloescht werden (Vorschaubilder neu laden). */
+    val backgroundsVersion: Int = 0,
     /** Fotos, die noch nicht nach SharePoint hochgeladen werden konnten. */
     val queueCount: Int = 0,
     val printerTest: String? = null,
@@ -91,6 +95,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val queue = UploadQueue(app)
     private val printer = IppPrinter(app)
     private val printerNetwork = PrinterNetwork(app)
+    private val backgrounds = BackgroundLibrary(app)
     /** Gemeinsamer Einstieg fuer beide Upload-Ziele. */
     private suspend fun uploadTo(config: WcmConfig, name: String, jpeg: ByteArray): Result<String> =
         if (config.uploadTarget == "nextcloud") nextcloud.upload(config, name, jpeg) else uploader.upload(config.flowUrl, name, jpeg)
@@ -200,6 +205,37 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(message = "Standard-Logo wird wieder verwendet.") }
     }
 
+    // ---- Foto-Hintergrund (Personen freistellen und vor ein gewaehltes Bild setzen) ----
+
+    fun addBackground(uri: Uri) {
+        viewModelScope.launch {
+            val id = withContext(Dispatchers.IO) { backgrounds.add(uri) }
+            if (id != null) {
+                // Neues Bild gleich auswaehlen.
+                updateConfigQuiet(_state.value.config.copy(backgroundId = id))
+            }
+            _state.update { it.copy(backgroundsVersion = it.backgroundsVersion + 1, message = if (id != null) "Hintergrund hinzugefügt und ausgewählt." else "Bild konnte nicht geladen werden.") }
+        }
+    }
+
+    fun deleteBackground(id: String) {
+        viewModelScope.launch {
+            val ok = withContext(Dispatchers.IO) { backgrounds.delete(id) }
+            if (ok && _state.value.config.backgroundId == id) updateConfigQuiet(_state.value.config.copy(backgroundId = ""))
+            _state.update { it.copy(backgroundsVersion = it.backgroundsVersion + 1, message = if (ok) "Hintergrund gelöscht." else null) }
+        }
+    }
+
+    /**
+     * Setzt die Personen auf dem Foto vor den gewaehlten Hintergrund. Ohne Auswahl, bei fehlendem Bild oder wenn die
+     * Erkennung scheitert, bleibt das Originalfoto: ein Gast verliert nie sein Foto.
+     */
+    private suspend fun applyBackground(photo: Bitmap, backgroundId: String): Bitmap {
+        if (backgroundId.isBlank()) return photo
+        val background = backgrounds.load(backgroundId) ?: return photo
+        return runCatching { BackgroundRemover.replace(photo, background) }.getOrDefault(photo)
+    }
+
     fun startBackgroundFile() = File(getApplication<Application>().filesDir, "start_bg.jpg")
 
     fun openSettings() = _state.update { it.copy(screen = Screen.Settings, message = null) }
@@ -232,8 +268,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val prepared = withContext(Dispatchers.Default) {
                 runCatching {
-                    val upright = decodeUpright(file)
-                    val style = BannerStyle.from(_state.value.config)
+                    val captured = decodeUpright(file)
+                    val config = _state.value.config
+                    val upright = applyBackground(captured, config.backgroundId)
+                    val style = BannerStyle.from(config)
                     val print = PhotoComposer.compose(getApplication(), upright, style)
                     val digital = PhotoComposer.composeDigital(getApplication(), upright, style)
                     fun jpeg(b: Bitmap) = ByteArrayOutputStream().also { b.compress(Bitmap.CompressFormat.JPEG, 92, it) }.toByteArray()

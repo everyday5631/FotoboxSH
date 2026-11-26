@@ -27,6 +27,8 @@ data class WcmConfig(
     val bannerAlpha: Int = 100,
     /** Banner auch auf der digitalen Version (QR-Code/Download) einblenden. */
     val bannerDigital: Boolean = true,
+    /** Hintergrund hinter den Personen: leer = Originalhintergrund, sonst ID aus der BackgroundLibrary («asset:…» / «file:…»). */
+    val backgroundId: String = "",
     /** Countdown vor der Aufnahme in Sekunden. */
     val timerSeconds: Int = 3,
     /** Ueberschrift und Knopf-Text auf dem Startbildschirm des Retail-Modus. */
@@ -76,6 +78,7 @@ class WcmSettings(context: Context) {
         bannerColor = prefs.getString("bannerColor", "navy").orEmpty(),
         bannerAlpha = prefs.getInt("bannerAlpha", 100),
         bannerDigital = prefs.getBoolean("bannerDigital", true),
+        backgroundId = prefs.getString("backgroundId", "").orEmpty(),
         timerSeconds = prefs.getInt("timerSeconds", 3),
         exposureIndex = prefs.getInt("exposureIndex", 0),
         zoomRatio = prefs.getFloat("zoomRatio", 1f),
@@ -111,6 +114,7 @@ class WcmSettings(context: Context) {
             .putString("bannerColor", config.bannerColor)
             .putInt("bannerAlpha", config.bannerAlpha.coerceIn(0, 100))
             .putBoolean("bannerDigital", config.bannerDigital)
+            .putString("backgroundId", config.backgroundId)
             .putInt("timerSeconds", config.timerSeconds)
             .putInt("exposureIndex", config.exposureIndex)
             .putFloat("zoomRatio", config.zoomRatio)

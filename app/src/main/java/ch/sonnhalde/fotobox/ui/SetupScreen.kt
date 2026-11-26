@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -48,6 +49,7 @@ import ch.sonnhalde.fotobox.MAX_COPIES
 import ch.sonnhalde.fotobox.UiState
 import ch.sonnhalde.fotobox.camera.CameraSetupPanel
 import ch.sonnhalde.fotobox.kiosk.Kiosk
+import ch.sonnhalde.fotobox.photo.BackgroundLibrary
 import ch.sonnhalde.fotobox.photo.BannerStyle
 import ch.sonnhalde.fotobox.photo.PhotoComposer
 import ch.sonnhalde.fotobox.wcm.WcmStatus
@@ -296,6 +298,8 @@ private fun ConfigTab(state: UiState, actions: Actions) {
         }
     }
 
+    BackgroundSection(state, actions)
+
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionTitle("Retail-Modus", "Startbildschirm")
         SonnField("Überschrift", cfg.startTitle, KeyboardType.Text, singleLine = false) { actions.onConfigQuiet(cfg.copy(startTitle = it.take(60))) }
@@ -327,5 +331,62 @@ private fun ConfigTab(state: UiState, actions: Actions) {
         Text("Kiosk: " + if (Kiosk.isDeviceOwner(context)) "Device Owner (volle Sperre)" else "kein Device Owner – nur «Bildschirm fixieren»", color = Sonn.Stone, fontSize = 13.sp)
         SonnField("Neue PIN (mind. 4 Zeichen)", newPin, KeyboardType.NumberPassword) { newPin = it }
         SonnButton("PIN speichern", primary = false, onClick = { actions.onSetPin(newPin); newPin = "" })
+    }
+}
+
+/** Foto-Hintergrund wie bei Teams: Personen werden freigestellt und vor das gewaehlte Bild gesetzt. */
+@Composable
+private fun BackgroundSection(state: UiState, actions: Actions) {
+    val context = LocalContext.current
+    val cfg = state.config
+    val library = remember { BackgroundLibrary(context) }
+    val items = remember(state.backgroundsVersion) { library.all() }
+    val selected = cfg.backgroundId.takeIf { id -> items.any { it.id == id } }.orEmpty()
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> uri?.let(actions.onAddBackground) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionTitle("Foto", "Hintergrund")
+        Text(
+            "Die Personen werden auf dem Tablet freigestellt und vor das gewählte Bild gesetzt (z. B. Wald, Fest, Logo). " +
+                "Das Live-Bild der Kamera zeigt weiterhin den echten Hintergrund; der neue Hintergrund erscheint im fertigen Foto " +
+                "(Druck und QR-Code). Ohne Auswahl bleibt der echte Hintergrund.",
+            color = Sonn.Stone, fontSize = 12.sp,
+        )
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            BackgroundTile(selected = selected.isEmpty(), label = "Original", onClick = { actions.onConfigQuiet(cfg.copy(backgroundId = "")) }) {
+                Text("Kein\nHintergrund", color = Sonn.Navy, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            }
+            for (item in items) {
+                BackgroundTile(selected = item.id == selected, label = item.label, onClick = { actions.onConfigQuiet(cfg.copy(backgroundId = item.id)) }) {
+                    val thumb = remember(item.id, state.backgroundsVersion) { library.thumbnail(item.id) }
+                    if (thumb != null) {
+                        Image(thumb.asImageBitmap(), contentDescription = item.label, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                    } else {
+                        Text(item.label, color = Sonn.Stone, fontSize = 12.sp)
+                    }
+                }
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SonnButton("Bild hinzufügen (Galerie)", primary = false, onClick = { picker.launch("image/*") })
+            val custom = items.firstOrNull { it.id == selected && !it.builtIn }
+            if (custom != null) SonnButton("Ausgewähltes Bild löschen", primary = false, onClick = { actions.onDeleteBackground(custom.id) })
+        }
+        Text("Die mitgelieferten Bilder sind Platzhalter in den Sonnhalde-Farben; eigene Bilder lassen sich hinzufügen und wieder löschen.", color = Sonn.Stone, fontSize = 12.sp)
+    }
+}
+
+@Composable
+private fun BackgroundTile(selected: Boolean, label: String, onClick: () -> Unit, content: @Composable () -> Unit) {
+    Column(Modifier.size(width = 132.dp, height = 112.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            Modifier.size(width = 132.dp, height = 92.dp)
+                .clip(MaterialShape)
+                .background(Sonn.Surface)
+                .border(if (selected) 3.dp else 1.dp, if (selected) Sonn.HeadingGold else Sonn.Line, MaterialShape)
+                .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center,
+        ) { content() }
+        Text(label, color = if (selected) Sonn.Navy else Sonn.Stone, fontSize = 12.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal, maxLines = 1)
     }
 }
