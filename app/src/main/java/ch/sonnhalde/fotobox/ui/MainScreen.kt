@@ -75,6 +75,8 @@ class Actions(
     val onClearBackground: () -> Unit,
     val onPickLogo: (Uri) -> Unit,
     val onClearLogo: () -> Unit,
+    val onAddBackground: (Uri) -> Unit,
+    val onDeleteBackground: (String) -> Unit,
     val onPhotoCaptured: (File) -> Unit,
     val onCameraError: (String) -> Unit,
     val onRetryUpload: () -> Unit,

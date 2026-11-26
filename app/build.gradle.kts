@@ -75,4 +75,6 @@ dependencies {
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.google.zxing:core:3.5.3")
+    // Hintergrund hinter Personen ersetzen: Modell steckt in der App, laeuft ohne Internet auf dem Tablet.
+    implementation("com.google.mlkit:segmentation-selfie:16.0.0-beta6")
 }
