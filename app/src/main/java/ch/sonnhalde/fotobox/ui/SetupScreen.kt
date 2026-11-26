@@ -22,10 +22,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -45,8 +48,10 @@ import ch.sonnhalde.fotobox.MAX_COPIES
 import ch.sonnhalde.fotobox.UiState
 import ch.sonnhalde.fotobox.camera.CameraSetupPanel
 import ch.sonnhalde.fotobox.kiosk.Kiosk
+import ch.sonnhalde.fotobox.photo.BannerStyle
 import ch.sonnhalde.fotobox.photo.PhotoComposer
 import ch.sonnhalde.fotobox.wcm.WcmStatus
+import kotlin.math.roundToInt
 
 enum class SetupTab(val label: String) {
     Config("Konfiguration"), Camera("Kamera"), Printer("Drucker"), Queue("Warteschlange"), Wifi("WLAN"),
@@ -246,12 +251,49 @@ private fun ConfigTab(state: UiState, actions: Actions) {
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionTitle("Foto", "Banner unten")
+        SonnField("Text im Banner links", cfg.bannerTextLeft, KeyboardType.Text) {
+            actions.onConfigQuiet(cfg.copy(bannerTextLeft = it.take(PhotoComposer.MAX_TEXT)))
+        }
+        Text("${cfg.bannerTextLeft.length}/${PhotoComposer.MAX_TEXT} Zeichen", color = Sonn.Stone, fontSize = 12.sp)
         SonnField("Text im Banner rechts (z. B. Personalfest 2027)", cfg.bannerText, KeyboardType.Text) {
             actions.onConfigQuiet(cfg.copy(bannerText = it.take(PhotoComposer.MAX_TEXT)))
         }
         Text("${cfg.bannerText.length}/${PhotoComposer.MAX_TEXT} Zeichen", color = Sonn.Stone, fontSize = 12.sp)
-        val preview = remember(cfg.bannerText) { PhotoComposer.preview(context, cfg.bannerText) }
-        Image(preview.asImageBitmap(), contentDescription = "Vorschau", modifier = Modifier.fillMaxWidth().border(1.dp, Sonn.Line, MaterialShape))
+
+        Text("Textfarbe", fontWeight = FontWeight.Bold)
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            for ((key, label) in listOf("black" to "Schwarz", "gold" to "Gold", "navy" to "Navy", "rainbow" to "Regenbogen")) {
+                SonnButton(label, primary = cfg.bannerColor == key, onClick = { actions.onConfigQuiet(cfg.copy(bannerColor = key)) })
+            }
+        }
+
+        var alpha by remember(cfg.bannerAlpha) { mutableFloatStateOf(cfg.bannerAlpha.toFloat()) }
+        Text("Banner-Hintergrund: ${alpha.roundToInt()} % deckend", fontWeight = FontWeight.Bold)
+        Slider(
+            value = alpha, onValueChange = { alpha = it },
+            onValueChangeFinished = { actions.onConfigQuiet(cfg.copy(bannerAlpha = alpha.roundToInt())) },
+            valueRange = 0f..100f, steps = 9,
+            colors = SliderDefaults.colors(thumbColor = Sonn.Navy, activeTrackColor = Sonn.HeadingGold),
+        )
+        Text("Unter 100 % liegt der Banner durchscheinend auf dem Foto, bei 100 % unter dem Foto.", color = Sonn.Stone, fontSize = 12.sp)
+
+        val logoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> uri?.let(actions.onPickLogo) }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SonnButton("Logo wählen (PNG/JPG)", primary = false, onClick = { logoPicker.launch("image/*") })
+            SonnButton("Standard-Logo", primary = false, onClick = actions.onClearLogo)
+        }
+        SettingSwitch("Banner auch auf der digitalen Version (QR-Code)", cfg.bannerDigital) { actions.onConfigQuiet(cfg.copy(bannerDigital = it)) }
+
+        val logoStamp = PhotoComposer.logoFile(context).lastModified()
+        val style = BannerStyle.from(cfg)
+        val preview = remember(style, logoStamp) { PhotoComposer.preview(context, style) }
+        Text("Vorschau Druck", color = Sonn.Stone, fontSize = 12.sp)
+        Image(preview.asImageBitmap(), contentDescription = "Vorschau Druck", modifier = Modifier.fillMaxWidth().border(1.dp, Sonn.Line, MaterialShape))
+        if (cfg.bannerDigital) {
+            val digital = remember(style, logoStamp) { PhotoComposer.previewDigital(context, style) }
+            Text("Vorschau digital (QR-Code)", color = Sonn.Stone, fontSize = 12.sp)
+            Image(digital.asImageBitmap(), contentDescription = "Vorschau digital", modifier = Modifier.fillMaxWidth().border(1.dp, Sonn.Line, MaterialShape))
+        }
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

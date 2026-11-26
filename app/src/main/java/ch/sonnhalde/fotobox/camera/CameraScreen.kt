@@ -84,7 +84,6 @@ fun CameraScreen(
     timerSeconds: Int,
     exposureIndex: Int,
     zoomRatio: Float,
-    bannerText: String,
     message: String?,
     onCaptured: (File) -> Unit,
     onFailure: (String) -> Unit,
@@ -154,8 +153,6 @@ fun CameraScreen(
         }
     }
 
-    // Sticker mit dem Banner-Text als Live-Vorschau (so erscheint er auf der digitalen Version).
-    val sticker = remember(bannerText) { PhotoComposer.stickerBitmap(bannerText, 120) }
     Box(
         Modifier.fillMaxSize().background(Sonn.NavyDeep)
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { shoot() },
@@ -192,14 +189,6 @@ fun CameraScreen(
                 .clip(CircleShape).background(Color.White).border(5.dp, Color(0x55000000), CircleShape)
                 .clickable { shoot() },
         )
-
-        // Unten rechts: Text-Sticker
-        sticker?.let {
-            Image(
-                it.asImageBitmap(), contentDescription = null,
-                modifier = Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(24.dp).height(56.dp),
-            )
-        }
 
         countdown?.let { c ->
             Text(

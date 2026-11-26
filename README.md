@@ -30,9 +30,11 @@ Dokumentation für Dritte:
 - **Retail-Modus** (Gäste, Kiosk/Vollbild): Startbildschirm (Hintergrundbild, Logo, Überschrift, Start-Knopf) → Live-Kamera →
   Timer (3, 5 oder 10 s) → Ergebnis mit **QR-Code** («Zum Herunterladen scannen»), Anzahl Abzüge (1–3) und **DRUCKEN**.
   Nach 90 s ohne Eingabe geht es zurück zum Start.
-- **Foto und Banner:** Pro Foto entstehen zwei Bilder: die **Druck-Version** (3:2, 10 × 15 cm, helles Banner mit Logo mittig und frei
-  wählbarem Text rechts, max. 28 Zeichen) und die **digitale Version** mit farbigem Text-Sticker. Hochgeladen wird die digitale,
-  gedruckt die Druck-Version.
+- **Foto und Banner:** Pro Foto entstehen zwei Bilder: die **Druck-Version** (3:2, 10 × 15 cm, Banner unten mit Logo mittig und frei
+  wählbarem Text links und rechts, je max. 28 Zeichen) und die **digitale Version** (Originalformat, Banner optional). Hochgeladen wird
+  die digitale, gedruckt die Druck-Version. Im Setup (Reiter Konfiguration) einstellbar: **Textfarbe** (Schwarz, Gold, Navy, Regenbogen),
+  **eigenes Logo** (PNG/JPG; «Standard-Logo» stellt das Sonnhalde-Logo wieder her), **Transparenz** des Banner-Hintergrunds (0–100 %;
+  bei 100 % steht der Banner unter dem Foto, darunter liegt er durchscheinend auf dem Foto) und **Banner auf der digitalen Version** (ein/aus).
 - **QR-Code:** Das Foto wird nach **Nextcloud** oder **SharePoint** (Power Automate) hochgeladen; der Freigabe-Link wird als QR-Code
   angezeigt. Schlägt der Upload fehl, wartet das Foto in der **Warteschlange** und kann später erneut gesendet werden.
 - **Druck:** Direkt per IPP an den QW410, kein Android-Druckdialog nötig (als Ausweg gibt es einen Knopf dafür). Optional wechselt die

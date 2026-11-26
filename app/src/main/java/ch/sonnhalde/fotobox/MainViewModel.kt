@@ -9,6 +9,7 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import ch.sonnhalde.fotobox.kiosk.Kiosk
+import ch.sonnhalde.fotobox.photo.BannerStyle
 import ch.sonnhalde.fotobox.photo.PhotoComposer
 import ch.sonnhalde.fotobox.print.IppPrinter
 import ch.sonnhalde.fotobox.print.PrinterNetwork
@@ -173,6 +174,32 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(bgVersion = it.bgVersion + 1, message = "Hintergrundbild entfernt.") }
     }
 
+    // ---- Banner-Logo (PNG oder JPG aus der Galerie, wird als PNG gespeichert) ----
+
+    fun setBannerLogo(uri: Uri) {
+        viewModelScope.launch {
+            val ok = withContext(Dispatchers.IO) {
+                runCatching {
+                    val resolver = getApplication<Application>().contentResolver
+                    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+                    var sample = 1
+                    while (maxOf(bounds.outWidth, bounds.outHeight) / sample > 1200) sample *= 2
+                    val bmp = resolver.openInputStream(uri)?.use {
+                        BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
+                    } ?: error("Bild nicht lesbar")
+                    PhotoComposer.logoFile(getApplication()).outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                }.isSuccess
+            }
+            _state.update { it.copy(message = if (ok) "Logo gespeichert." else "Logo konnte nicht geladen werden.") }
+        }
+    }
+
+    fun clearBannerLogo() {
+        PhotoComposer.logoFile(getApplication()).delete()
+        _state.update { it.copy(message = "Standard-Logo wird wieder verwendet.") }
+    }
+
     fun startBackgroundFile() = File(getApplication<Application>().filesDir, "start_bg.jpg")
 
     fun openSettings() = _state.update { it.copy(screen = Screen.Settings, message = null) }
@@ -206,9 +233,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val prepared = withContext(Dispatchers.Default) {
                 runCatching {
                     val upright = decodeUpright(file)
-                    val text = _state.value.config.bannerText
-                    val print = PhotoComposer.compose(getApplication(), upright, text)
-                    val digital = PhotoComposer.composeDigital(upright, text)
+                    val style = BannerStyle.from(_state.value.config)
+                    val print = PhotoComposer.compose(getApplication(), upright, style)
+                    val digital = PhotoComposer.composeDigital(getApplication(), upright, style)
                     fun jpeg(b: Bitmap) = ByteArrayOutputStream().also { b.compress(Bitmap.CompressFormat.JPEG, 92, it) }.toByteArray()
                     Triple(print, digital, jpeg(print) to jpeg(digital))
                 }
@@ -353,7 +380,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(uploadTestText = "Test läuft …", uploadTestQr = null) }
         viewModelScope.launch {
             val jpeg = withContext(Dispatchers.Default) {
-                val bmp = PhotoComposer.composeDigital(PhotoComposer.preview(getApplication(), ""), config.bannerText.ifBlank { "Test" }, 900)
+                val style = BannerStyle.from(config).let { if (it.textLeft.isBlank() && it.textRight.isBlank()) it.copy(textRight = "Test") else it }
+                val bmp = PhotoComposer.previewDigital(getApplication(), style, 900)
                 ByteArrayOutputStream().also { bmp.compress(Bitmap.CompressFormat.JPEG, 90, it) }.toByteArray()
             }
             val result = uploadTo(config, "test-${System.currentTimeMillis()}.jpg", jpeg)
@@ -408,7 +436,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(printerTest = "Testdruck wird gesendet …") }
         viewModelScope.launch {
             val img = withContext(Dispatchers.Default) {
-                val bmp = PhotoComposer.preview(getApplication(), _state.value.config.bannerText.ifBlank { "Testdruck" }, width = 1800)
+                val style = BannerStyle.from(_state.value.config).let { if (it.textLeft.isBlank() && it.textRight.isBlank()) it.copy(textRight = "Testdruck") else it }
+                val bmp = PhotoComposer.preview(getApplication(), style, width = 1800)
                 encodeForPrint(bmp, _state.value.config.printRotation, null)
             }
             val result = printer.printJpeg(_state.value.config, img.bytes, img.width, img.height, copies = 1)
