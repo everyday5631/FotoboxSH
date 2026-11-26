@@ -378,6 +378,8 @@ private fun BackgroundSection(state: UiState, actions: Actions) {
             else "Gäste sehen keine Auswahl; es gilt immer das Bild oben.",
             color = Sonn.Stone, fontSize = 12.sp,
         )
+        SettingSwitch("Diagnose-Zeile zum Hintergrund auf dem Ergebnis (für Tests)", cfg.backgroundDiagnostics) { actions.onConfigQuiet(cfg.copy(backgroundDiagnostics = it)) }
+        Text("Zeigt nach jedem Foto, welcher Hintergrund galt und wie viel des Bildes als Person erkannt wurde. Im Einsatz ausschalten.", color = Sonn.Stone, fontSize = 12.sp)
         Text("Die mitgelieferten Bilder sind Platzhalter in den Sonnhalde-Farben; eigene Bilder lassen sich hinzufügen und wieder löschen.", color = Sonn.Stone, fontSize = 12.sp)
     }
 }

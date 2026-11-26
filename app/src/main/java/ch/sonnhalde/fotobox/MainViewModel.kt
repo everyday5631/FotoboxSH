@@ -239,9 +239,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * Setzt die Personen auf dem Foto vor den gewaehlten Hintergrund. Ohne Auswahl, bei fehlendem Bild oder wenn die
      * Erkennung scheitert, bleibt das Originalfoto: ein Gast verliert nie sein Foto.
      */
-    private suspend fun applyBackground(photo: Bitmap, backgroundId: String): Bitmap {
+    private suspend fun applyBackground(photo: Bitmap, backgroundId: String, diagnostics: Boolean): Bitmap {
         backgroundNote = null
-        if (backgroundId.isBlank()) return photo
+        if (backgroundId.isBlank()) {
+            if (diagnostics) backgroundNote = "Hintergrund: keiner gewählt (Original)."
+            return photo
+        }
+        val label = backgrounds.all().firstOrNull { it.id == backgroundId }?.label ?: backgroundId
         val background = backgrounds.load(backgroundId)
         if (background == null) {
             Log.w(TAG, "Hintergrund $backgroundId nicht lesbar")
@@ -255,7 +259,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 backgroundNote = when {
                     r.personShare < 0.01f -> "Keine Person erkannt: das Foto zeigt nur den Hintergrund."
                     r.personShare > 0.97f -> "Der Hintergrund wurde nicht erkannt (ganzes Bild als Person): das Foto bleibt fast unverändert."
-                    else -> null
+                    else -> if (diagnostics) "Hintergrund «$label»: ${(r.personShare * 100).toInt()} % des Bildes als Person erkannt." else null
                 }
                 r.image
             },
@@ -305,7 +309,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     val captured = decodeUpright(file)
                     val config = _state.value.config
                     val backgroundId = if (config.backgroundGuestChoice) _state.value.guestBackgroundId ?: config.backgroundId else config.backgroundId
-                    val upright = applyBackground(captured, backgroundId)
+                    val upright = applyBackground(captured, backgroundId, config.backgroundDiagnostics)
                     val style = BannerStyle.from(config)
                     val print = PhotoComposer.compose(getApplication(), upright, style)
                     val digital = PhotoComposer.composeDigital(getApplication(), upright, style)

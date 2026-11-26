@@ -31,6 +31,8 @@ data class WcmConfig(
     val backgroundId: String = "",
     /** Gaeste waehlen den Hintergrund selbst beim Fotografieren (sonst gilt immer [backgroundId]). */
     val backgroundGuestChoice: Boolean = true,
+    /** Diagnose-Zeile zum Foto-Hintergrund auf dem Ergebnis-Bildschirm (fuer Tests; im Einsatz ausschalten). */
+    val backgroundDiagnostics: Boolean = true,
     /** Countdown vor der Aufnahme in Sekunden. */
     val timerSeconds: Int = 3,
     /** Ueberschrift und Knopf-Text auf dem Startbildschirm des Retail-Modus. */
@@ -82,6 +84,7 @@ class WcmSettings(context: Context) {
         bannerDigital = prefs.getBoolean("bannerDigital", true),
         backgroundId = prefs.getString("backgroundId", "").orEmpty(),
         backgroundGuestChoice = prefs.getBoolean("backgroundGuestChoice", true),
+        backgroundDiagnostics = prefs.getBoolean("backgroundDiagnostics", true),
         timerSeconds = prefs.getInt("timerSeconds", 3),
         exposureIndex = prefs.getInt("exposureIndex", 0),
         zoomRatio = prefs.getFloat("zoomRatio", 1f),
@@ -119,6 +122,7 @@ class WcmSettings(context: Context) {
             .putBoolean("bannerDigital", config.bannerDigital)
             .putString("backgroundId", config.backgroundId)
             .putBoolean("backgroundGuestChoice", config.backgroundGuestChoice)
+            .putBoolean("backgroundDiagnostics", config.backgroundDiagnostics)
             .putInt("timerSeconds", config.timerSeconds)
             .putInt("exposureIndex", config.exposureIndex)
             .putFloat("zoomRatio", config.zoomRatio)
