@@ -2,6 +2,10 @@
 
 Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet mit DNP QW410 und WCMPlus.
 
+> **Referenzstand:** `v0.1.36` ist die letzte Version, die vollständig und fehlerfrei funktioniert hat (Angabe der Auftraggeberseite).
+> Alles danach (z. B. das anpassbare Banner mit Text links/rechts, Farben, eigenem Logo, Transparenz und Banner auf der digitalen
+> Version) ist nur gebaut, aber noch **nicht auf dem Tablet getestet**. Bei Fehlern ist `v0.1.36` der Rückfallstand.
+
 ## Ablauf der App
 
 1. **Splash** → **Setup-Modus** (Reiter Konfiguration, Kamera, Drucker, Warteschlange, WLAN; Start-Knopf unten; ⏻ beendet die App nach PIN).
