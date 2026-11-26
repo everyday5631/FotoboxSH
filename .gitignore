@@ -11,3 +11,4 @@ captures/
 *.jks
 *.keystore
 !app/debug.keystore
+_site/

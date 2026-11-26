@@ -1,3 +1,9 @@
+---
+title: Entwicklungsnotizen
+category: entwicklung
+order: 10
+summary: Technik, Gerätefakten, Entscheidungen, offene Punkte
+---
 # Entwicklungsnotizen
 
 Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet mit DNP QW410 und WCMPlus.
@@ -62,6 +68,22 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
   Das Live-Bild der Kamera zeigt den echten Hintergrund. Bei Fehlern der Erkennung oder fehlendem Bild bleibt das Originalfoto. Haare, Hände und Gruppen
   sind die Schwachstellen des Modells; Randqualität nur auf dem Tablet beurteilbar.
 
+## Webseite (GitHub Pages)
+
+Die Dokumentation wird bei jedem Push auf `main`, der `README.md` oder `docs/` ändert, automatisch als Website veröffentlicht
+(`.github/workflows/pages.yml` → `tools/build_site.py`, Ausgabe nach `_site/`). In Pull Requests läuft derselbe Bau zur Prüfung, ohne zu veröffentlichen.
+
+- **Einmalig in GitHub:** *Settings → Pages → Build and deployment → Source: «GitHub Actions»*. Ohne das schlägt der Schritt «Deploy» fehl.
+  Die Adresse steht danach im Workflow-Lauf (Schritt *deploy*) und unter *Settings → Pages*. Die Seite ist öffentlich.
+- **Seiten und Kategorien:** Die Startseite ist `README.md`. Jede weitere Seite ist eine Markdown-Datei unter `docs/` mit Kopfblock
+  (`title`, `category`, `order`, `summary`). Die Kategorien stehen in `docs/_site.json` (`bedienung`, `anbindung`, `entwicklung`); neue Kategorie = Eintrag dort.
+  Fehlt die Kategorie oder ist sie unbekannt, bricht der Bau ab. Navigation und «Alle Seiten» auf der Startseite entstehen daraus von selbst.
+- **Dateien neben den Seiten** (Bilder, PDF, `docs/anleitung/index.html`) werden unverändert mitkopiert; Links dorthin relativ setzen.
+  Links auf andere `.md`-Dateien werden zu `.html` umgebogen, Links auf Dateien ausserhalb von `docs/` zeigen auf GitHub.
+- **Nicht veröffentlichen:** Dateien/Ordner mit `_` am Anfang; Text zwischen `<!-- intern -->` und `<!-- /intern -->` (bleibt im Repository sichtbar!).
+- **Lokal prüfen:** `pip install markdown-it-py && python tools/build_site.py _site` (`_site/` ist in `.gitignore`).
+- Stand: Bau lokal geprüft; die Veröffentlichung selbst ist **noch nicht in GitHub getestet** (erst nach Merge und der Einstellung oben möglich).
+
 ## Offene Punkte (Reihenfolge nach Wunsch der Nutzerperson)
 
 1. ~~Release-Workflow~~ erstellt (`docs/RELEASE.md`), noch nicht ausgeführt
@@ -72,3 +94,4 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
 6. Warteschlange automatisch senden, sobald Internet da ist: **bewusst offen gelassen**.
 7. Version 1.0 ausweisen, README für Dritte: **bewusst offen gelassen**.
 8. Banner (PR #8) und Foto-Hintergrund/Icon (PR #11) auf dem Tablet testen.
+9. Website: Pages-Quelle auf «GitHub Actions» stellen, ersten Lauf prüfen; Passwort in `docs/EINRICHTUNG.md` aus dem Repository nehmen (liegt in der Git-Historie, Passwort ändern).

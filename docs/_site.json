@@ -1,0 +1,9 @@
+{
+  "titel": "Sonnhalde Fotobox",
+  "untertitel": "Dokumentation",
+  "kategorien": [
+    { "id": "bedienung",   "titel": "Bedienung und Einrichtung", "beschreibung": "Für Mitarbeitende und IT: Bedienung der App, Einrichtung vor Ort, Anleitungen." },
+    { "id": "anbindung",   "titel": "Upload und Anbindung",      "beschreibung": "Nextcloud, SharePoint/Power Automate und weitere Ziele für den QR-Code-Download." },
+    { "id": "entwicklung", "titel": "Entwicklung und Release",   "beschreibung": "Technik, Gerätefakten, Entscheidungen, offene Punkte, Releases." }
+  ]
+}

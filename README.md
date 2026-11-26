@@ -23,6 +23,8 @@ Dokumentation für Dritte:
 | [docs/RELEASE.md](docs/RELEASE.md) | Release mit APK veröffentlichen (Workflow, Versionsschema) |
 | [docs/ENTWICKLUNG.md](docs/ENTWICKLUNG.md) | Technik, Gerätefakten, Entscheidungen, offene Punkte (für Entwickelnde) |
 
+Diese Dokumentation steht auch als Website bereit (GitHub Pages, wird bei jeder Änderung in `main` automatisch neu erzeugt, siehe [docs/ENTWICKLUNG.md](docs/ENTWICKLUNG.md), Abschnitt Webseite).
+
 ## Funktionen
 
 - **Setup-Modus** (Einrichtung): Reiter **Konfiguration**, **Kamera**, **Drucker**, **Warteschlange**, **WLAN**. Unten der grosse

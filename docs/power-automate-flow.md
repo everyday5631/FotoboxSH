@@ -1,3 +1,9 @@
+---
+title: Upload nach SharePoint (Power Automate)
+category: anbindung
+order: 20
+summary: Flow-Vertrag und Einrichtung
+---
 # Power-Automate-Flow für den SharePoint-Upload
 
 Die App schickt jedes Foto (digitale Version) an einen Flow. Der legt es in SharePoint ab und gibt einen

@@ -1,3 +1,9 @@
+---
+title: Bedienung der App
+category: bedienung
+order: 10
+summary: Bildschirme und Knöpfe im Setup- und Retail-Modus, mit Screenshots
+---
 # Bedienung der App
 
 Beschreibung der Bildschirme und Knöpfe (Beschriftungen aus dem Code, mit Screenshots abgeglichen) (Stand: `main` mit Release `v0.1.36`). Einrichtung und Fehlersuche:

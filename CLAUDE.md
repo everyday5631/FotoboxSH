@@ -17,6 +17,12 @@ Details, Gerätefakten und Entscheidungen: **`docs/ENTWICKLUNG.md`** (zuerst les
   `dev-build` ist ein automatisches Vorab-Release (wird bei jedem Push überschrieben). `v0.1.36` ist das erste echte Release.
 - **Sicherheit:** Keine Zugangsdaten (App-Passwörter, Flow-URL, WLAN-Passwörter) ins Repository. `app/debug.keystore` ist bewusst
   eingecheckt (nicht geheim, sorgt für gleiche Signatur bei jedem Build).
+- **Webseite (GitHub Pages):** Dokumentation und Anleitungen erscheinen automatisch auf der Projekt-Website (`.github/workflows/pages.yml`,
+  Generator `tools/build_site.py`). **Jede neue Seite braucht eine Kategorie:** neue Markdown-Datei unter `docs/` immer mit Kopfblock
+  `---` / `title:` / `category:` (`bedienung`, `anbindung`, `entwicklung`; Liste in `docs/_site.json`) / `order:` / `summary:` / `---` anlegen.
+  Passt keine Kategorie, in `docs/_site.json` eine neue eintragen. Bilder/PDFs neben die Seite legen und von ihr aus verlinken.
+  Ohne gültige Kategorie schlägt der Bau fehl (rot im PR). Zugangsdaten gehören nicht auf die Seite: Text zwischen
+  `<!-- intern -->` und `<!-- /intern -->` wird nicht veröffentlicht (besser: gar nicht ins Repository). Die Seite geht erst nach dem Merge in `main` online.
 - **UpReach** ist kommerzielle, lizenzierte Software: nur als Vorbild für Aussehen und Ablauf verwenden, nicht zerlegen oder umbauen.
 
 ## Struktur

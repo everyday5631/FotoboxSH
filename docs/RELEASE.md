@@ -1,3 +1,9 @@
+---
+title: Release veröffentlichen
+category: entwicklung
+order: 20
+summary: Workflow, Versionsschema, Release zurückziehen
+---
 # Release veröffentlichen
 
 Ein Release mit installierbarer APK entsteht per Knopfdruck in GitHub (Workflow `.github/workflows/release.yml`).

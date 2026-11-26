@@ -1,3 +1,9 @@
+---
+title: Upload nach Nextcloud
+category: anbindung
+order: 10
+summary: Nextcloud-Konto, App-Passwort und Test
+---
 # Upload nach Nextcloud
 
 Alternative zu Power Automate: Die App lädt das Foto direkt in eine Nextcloud (WebDAV) und erstellt dort einen

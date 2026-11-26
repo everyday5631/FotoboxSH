@@ -1,3 +1,9 @@
+---
+title: Einrichtung und Einsatz vor Ort
+category: bedienung
+order: 20
+summary: Checkliste, Netz, WCMPlus, Upload, Kiosk, Fehlersuche, Datenschutz, Wartung
+---
 # Einrichtung und Einsatz vor Ort
 
 Anleitung für Mitarbeitende und IT. Überblick und Installation: [README.md](../README.md). Bildschirme und Knöpfe: [BEDIENUNG.md](BEDIENUNG.md). Technik: [ENTWICKLUNG.md](ENTWICKLUNG.md).
@@ -51,7 +57,7 @@ Schritte braucht es nur bei Neuaufbau oder wenn sich das WLAN ändert.
 
 1. DNP QW410 an den Strom anschliessen und einschalten. Das WCMPlus-Modul (in der Regel am Drucker angebracht) startet und erstellt ein
    eigenes WLAN **`WCMPLUS-xxx`**.
-2. **Nicht über die Fotobox-App**, sondern mit **Laptop oder Smartphone** (mit Browser) in dieses WLAN gehen. Passwort in der Sonnhalde: `$onnh4ld3-F0tob0x*` (von der Sonnhalde gesetzt;
+2. **Nicht über die Fotobox-App**, sondern mit **Laptop oder Smartphone** (mit Browser) in dieses WLAN gehen. Passwort in der Sonnhalde: <!-- intern -->`$onnh4ld3-F0tob0x*`<!-- /intern --> (von der Sonnhalde gesetzt;
    Werkseinstellung laut Hersteller `dnp12345`, andere Module wie AirCast haben ein anderes). Die Warnung «Kein Internetzugriff» ist normal, weil dieses
    WLAN kein Internet hat; bestätigen.
 3. **Portal öffnen:** Der QW410 druckt in der Regel automatisch eine **Testseite mit dem Zugangs-Link** (z. B. `192.168.4.1`).
