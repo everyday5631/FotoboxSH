@@ -60,7 +60,11 @@ object BackgroundRemover {
         return Replacement(out, share)
     }
 
-    /** Maske als ALPHA_8-Bild: 255 = Person, 0 = Hintergrund, mit weichem Uebergang am Rand. */
+    /**
+     * Maske als ARGB-Bild (schwarz, nur der Alpha-Kanal traegt die Maske): 255 = Person, 0 = Hintergrund, weicher Rand.
+     * Bewusst kein ALPHA_8: Android behandelt ein ALPHA_8-Bild beim Zeichnen als Abdeckung einer (deckenden) Paint-Farbe,
+     * mit DST_IN bliebe das Foto dann unveraendert (so war es auf dem Tablet zu sehen).
+     */
     private suspend fun segmentMask(photo: Bitmap): Pair<Bitmap, Float> {
         val small = downscale(photo, SEGMENT_SIDE)
         val result = suspendCancellableCoroutine { cont ->
@@ -73,18 +77,17 @@ object BackgroundRemover {
         val buffer = result.buffer
         buffer.rewind()
         val floats = buffer.asFloatBuffer()
-        val bytes = ByteArray(mw * mh)
+        val pixels = IntArray(mw * mh)
         var sum = 0.0
-        for (i in bytes.indices) {
+        for (i in pixels.indices) {
             // Konfidenz «Person» 0..1; unter 0.35 ganz Hintergrund, ueber 0.75 ganz Person, dazwischen weich.
             val a = ((floats.get(i) - LOW) / (HIGH - LOW)).coerceIn(0f, 1f)
             val soft = a * a * (3 - 2 * a)
             sum += soft
-            bytes[i] = (soft * 255f).toInt().toByte()
+            pixels[i] = (soft * 255f).toInt().coerceIn(0, 255) shl 24
         }
-        val mask = Bitmap.createBitmap(mw, mh, Bitmap.Config.ALPHA_8)
-        mask.copyPixelsFromBuffer(java.nio.ByteBuffer.wrap(bytes))
-        return mask to (sum / bytes.size).toFloat()
+        val mask = Bitmap.createBitmap(pixels, mw, mh, Bitmap.Config.ARGB_8888)
+        return mask to (sum / pixels.size).toFloat()
     }
 
     private fun downscale(bmp: Bitmap, maxSide: Int): Bitmap {
