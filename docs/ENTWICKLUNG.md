@@ -50,7 +50,13 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
 ## Bekannte Grenzen / Risiken
 
 - WLAN-Wechsel: Android fragt beim Verbinden um Erlaubnis; im gesperrten Kiosk kann diese Systemabfrage hakeln. Trennt das Internet kurz.
+  Mit «App anheften» (Bildschirm fixieren) hat der WLAN-Wechsel auf dem Xiaomi-Tablet funktioniert (Rückmeldung der Nutzerperson). Ob der volle
+  Kiosk (Device Owner) sich überhaupt noch lohnt, ist offen; Anheften reicht vermutlich und braucht keine Einrichtung per `adb`.
 - Zugangsdaten (Nextcloud-App-Passwort, Flow-URL, WLAN-Passwort, PIN) liegen im App-Speicher (SharedPreferences, unverschlüsselt). Eigene Zugänge mit minimalen Rechten verwenden.
+  **Für den Entwicklungsbetrieb tragbar, für den Einsatz bei der Sonnhalde nicht** (Entscheid der Nutzerperson): muss vor allem dann gelöst werden, wenn
+  Power Automate dazukommt (die Flow-URL enthält die Signatur und ist selbst ein Geheimnis). Ansatz offen, z. B. Android-Keystore-Verschlüsselung;
+  ein Konfigurations-Export darf die Geheimnisse nicht im Klartext enthalten.
+- Schrift: **Arial ist die offizielle Schrift des Corporate Designs** (Nutzerperson). Der Vermerk im Design-Repo `Se-Design` (Definitionen-Blatt nennt Open Sans/Source Serif Pro) gilt damit als geklärt.
 - Kein Video/GIF-Hintergrund, kein E-Mail-Versand (UpReach hat sie).
 - Foto-Hintergrund: Die Freistellung läuft erst nach der Aufnahme (ML Kit `segmentation-selfie`, Modell in der App, einige hundert ms bis wenige Sekunden je nach Tablet).
   Das Live-Bild der Kamera zeigt den echten Hintergrund. Bei Fehlern der Erkennung oder fehlendem Bild bleibt das Originalfoto. Haare, Hände und Gruppen
@@ -59,8 +65,10 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
 ## Offene Punkte (Reihenfolge nach Wunsch der Nutzerperson)
 
 1. ~~Release-Workflow~~ erstellt (`docs/RELEASE.md`), noch nicht ausgeführt
-2. Netz-Diagnose im Setup (eigene IP, Erreichbarkeit, Netz-Suche, Protokoll zum Teilen).
-3. Konfiguration exportieren/importieren (zweites Tablet).
-4. Fische-Bild als Standard-Hintergrund (`start_background.jpg`), Datei steht noch aus.
-5. Warteschlange automatisch senden, sobald Internet da ist.
-6. Version 1.0 ausweisen, README für Dritte.
+2. Netz-Diagnose im Setup (eigene IP, Erreichbarkeit, Netz-Suche, Protokoll zum Teilen): später, am besten mit `adb logcat` zum Mitschneiden; **zurückgestellt**.
+3. Konfiguration exportieren/importieren (zweites Tablet): später; **zurückgestellt** (Geheimnisse beachten, siehe oben).
+4. Zugangsdaten sicher ablegen (Nextcloud, später Power Automate): **vor dem Einsatz zu klären**.
+5. Fische-Bild als Standard-Hintergrund (`start_background.jpg`), Datei steht noch aus.
+6. Warteschlange automatisch senden, sobald Internet da ist: **bewusst offen gelassen**.
+7. Version 1.0 ausweisen, README für Dritte: **bewusst offen gelassen**.
+8. Banner (PR #8) und Foto-Hintergrund/Icon (PR #11) auf dem Tablet testen.
