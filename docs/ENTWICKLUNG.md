@@ -11,9 +11,9 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
 
 ## Ablauf der App
 
-1. **Splash** → **Setup-Modus** (Reiter Konfiguration, Kamera, Drucker, Warteschlange, WLAN; Start-Knopf unten; ⏻ beendet die App nach PIN).
+1. **Splash** → **Setup-Modus** (Reiter von links nach rechts, je weiter links desto technischer: System, Drucker, QR & Upload, Kamera, Ablauf, Aussehen, Fotos; Start-Knopf unten; ⏻ beendet die App nach PIN).
 2. **Retail-Modus** (Kiosk): **Welcome** (Hintergrund, Logo, Überschrift, «jetzt starten») → **Kamera** (Live-Bild, Timer) → **Result**
-   (digitale Version mit QR-Code links, Druck-Version mit «DRUCKEN» rechts, Haken = fertig). Nach 90 s ohne Eingabe zurück zum Start.
+   (digitale Version mit QR-Code links, Druck-Version mit «DRUCKEN» rechts, Haken = fertig). Nach einstellbaren 90 s ohne Eingabe zurück zum Start (pausiert beim Drucken).
    Beenden: langer Druck auf Logo/Banner, dann PIN (Standard `1234`).
 3. Pro Foto entstehen zwei Bilder (`photo/PhotoComposer`): **Druck-Version** 3:2 mit Banner (Logo mittig, Text links/rechts je max. 28 Zeichen, Farbe, Transparenz, eigenes Logo; `BannerStyle`)
    und **digitale Version** (Originalformat, Banner optional ein/aus). Hochgeladen wird die digitale, gedruckt die Druck-Version.
@@ -24,7 +24,7 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
 |---|---|
 | `kiosk` | Device-Admin-Receiver, Lock-Task/Vollbild, PIN. Voller Kiosk nur als Device Owner (`adb shell dpm set-device-owner ch.sonnhalde.fotobox/.kiosk.AdminReceiver`), sonst «Bildschirm fixieren». |
 | `camera` | CameraX: Retail-Kamera, Setup-Panel (Front/Rück, Belichtung, Zoom). Kamera nur beim Verlassen des Bildschirms freigeben, **nicht** an State koppeln (sonst «Not bound to a valid Camera»). |
-| `photo` | `PhotoComposer` (Druck- und digitale Version, Banner), `BackgroundLibrary` (mitgelieferte Platzhalter in `app/src/main/assets/backgrounds/`, eigene Bilder in `files/backgrounds/`), `BackgroundRemover` (ML-Kit-Selfie-Segmentierung, Person vor gewähltes Bild setzen). Einstellung: `WcmConfig.backgroundId` (`asset:…` / `file:…`, leer = aus) als Vorauswahl, `backgroundGuestChoice` = Gäste wählen auf dem Kamera-Bildschirm (`UiState.guestBackgroundId`, zurückgesetzt beim Zurück zum Startbildschirm). |
+| `photo` | `PhotoHistory` (Foto-Verlauf der letzten Fotos auf dem internen Speicher, `files/history/<Zeitstempel>/` mit `print.jpg`, `digital.jpg`, `status.json`; Ring-Puffer nach Anzahl und Alter), `PhotoComposer` (Druck- und digitale Version, Banner), `BackgroundLibrary` (mitgelieferte Platzhalter in `app/src/main/assets/backgrounds/`, eigene Bilder in `files/backgrounds/`), `BackgroundRemover` (ML-Kit-Selfie-Segmentierung, Person vor gewähltes Bild setzen). Einstellung: `WcmConfig.backgroundId` (`asset:…` / `file:…`, leer = aus) als Vorauswahl, `backgroundGuestChoice` = Gäste wählen auf dem Kamera-Bildschirm (`UiState.guestBackgroundId`, zurückgesetzt beim Zurück zum Startbildschirm). |
 | `print` | `Ipp` (Codec), `IppPrinter` (Suche, Auswahl der Warteschlange, Druck), `PdfWrap` (JPEG → PDF 4x6), `PrinterNetwork` (WLAN-Wechsel), `PhotoPrinter` (Android-Druckdialog als Ausweg). |
 | `upload` | `NextcloudUploader` (WebDAV + OCS-Freigabe, Schrittmeldungen 1/4–4/4), `SharePointUploader` (Power-Automate-Flow, Vertrag in `docs/power-automate-flow.md`), `UploadQueue` (fehlgeschlagene Fotos). |
 | `wcm` | `WcmConfig`/`WcmSettings` (alle Einstellungen), `WcmClient` (Erreichbarkeit des Portals). |
@@ -107,3 +107,4 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
     Einstiegs-Prompt für den nächsten Chat: `docs/START-NEUER-CHAT.md`.
     **Traktandum 22: Automatische Update-Prüfung** (Obtainium oder eigenständig in der App); Entscheid und Risiken (öffentliches Debug-Zertifikat) in `docs/ERKENNTNISSE-2026-11-27.md`, Abschnitt 9.3.
     Stand: PR #12 und #14 gemergt (27.11.2026), `main` = `c347c24`; `dev-build` ist ein laufend überschriebenes Pre-Release.
+    **Block A gebaut (PR #24, ungetestet):** Foto-Verlauf (Reiter «Fotos»), einstellbares Zeitlimit, Druck vom Speicher in einer seriellen Warteschlange mit 2 Wiederholungen je 1 Abzug; Entscheidungen in `docs/ERKENNTNISSE-2026-11-27.md`, Abschnitt 8a.

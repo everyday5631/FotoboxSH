@@ -1,7 +1,6 @@
 package ch.sonnhalde.fotobox.ui
 
 import android.content.res.Configuration
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,45 +25,42 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ch.sonnhalde.fotobox.AppVersion
+import ch.sonnhalde.fotobox.MAX_COPIES
 import ch.sonnhalde.fotobox.PrintState
+import ch.sonnhalde.fotobox.R
 import ch.sonnhalde.fotobox.UiState
 import ch.sonnhalde.fotobox.UploadState
 import ch.sonnhalde.fotobox.print.PhotoPrinter
 import kotlinx.coroutines.delay
-import kotlin.math.cos
-import kotlin.math.sin
 
-/** Zeit ohne Eingabe, nach der der Ergebnis-Bildschirm zum Start zurueckkehrt. */
-private const val RESULT_TIMEOUT_MS = 90_000L
+/**
+ * Das Zeitlimit des Ergebnis-Bildschirms ist einstellbar (Setup). Solange gedruckt wird, laeuft es nicht ab; haengt ein Druckschritt,
+ * gilt spaetestens nach dieser Zeit trotzdem das Limit (jeder neue Schritt startet sie neu).
+ */
+private const val PRINT_PAUSE_CAP_MS = 300_000L
 
-/** Startbild beim Oeffnen der App: Sonne + Wortmarke (wie der UpReach-Splashscreen). */
+/** Startbild beim Oeffnen der App: Sonnhalde-Logo, «FOTOBOX» und Versionsanzeige. */
 @Composable
 fun SplashScreen(onDone: () -> Unit) {
     LaunchedEffect(Unit) { delay(1800); onDone() }
     Box(Modifier.fillMaxSize().background(Sonn.Navy), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(20.dp)) {
-            Canvas(Modifier.size(120.dp)) {
-                val c = Offset(size.width / 2, size.height / 2)
-                drawCircle(Sonn.LogoGold, radius = size.minDimension * 0.22f, center = c)
-                for (i in 0 until 8) {
-                    val a = Math.toRadians(i * 45.0)
-                    val dir = Offset(cos(a).toFloat(), sin(a).toFloat())
-                    drawLine(Sonn.LogoGold, c + dir * (size.minDimension * 0.34f), c + dir * (size.minDimension * 0.46f),
-                        strokeWidth = 8f, cap = StrokeCap.Round)
-                }
-            }
-            Text("SONNHALDE", color = Sonn.Cream, fontSize = 32.sp, fontWeight = FontWeight.Bold, letterSpacing = 6.sp)
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(24.dp)) {
+            // Echtes Sonnhalde-Logo (weiss, fuer dunklen Grund) statt der frueher gezeichneten Sonne mit Text.
+            Image(
+                painter = painterResource(R.drawable.sonnhalde_logo_zusatz_neg),
+                contentDescription = "Sonnhalde, Pflege- und Betreuungszentrum",
+                modifier = Modifier.fillMaxWidth(0.55f),
+            )
             Text("FOTOBOX", color = Sonn.LogoGold, fontSize = 16.sp, fontWeight = FontWeight.Bold, letterSpacing = 4.sp)
         }
         Text(
@@ -78,8 +74,13 @@ fun SplashScreen(onDone: () -> Unit) {
 @Composable
 fun ResultScreen(state: UiState, actions: Actions, onAdmin: () -> Unit) {
     val context = LocalContext.current
-    // Zurueck zum Start, wenn niemand mehr tippt; jede Zustandsaenderung startet die Frist neu.
-    LaunchedEffect(state.photo, state.print, state.upload) { delay(RESULT_TIMEOUT_MS); actions.onHome() }
+    // Zurueck zum Start, wenn niemand mehr tippt; jede Zustandsaenderung startet die Frist neu, waehrend des Druckens ist sie pausiert.
+    val timeoutMs = state.config.resultTimeoutSeconds * 1000L
+    val printing = state.print is PrintState.Printing
+    LaunchedEffect(state.photo, state.print, state.upload, timeoutMs) {
+        delay(if (printing) maxOf(timeoutMs, PRINT_PAUSE_CAP_MS) else timeoutMs)
+        actions.onHome()
+    }
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     // Bild eines Blocks: im Querformat (fit) bekommt es nur den Platz, der neben QR-Code bzw. Druckknopf bleibt,
@@ -117,12 +118,22 @@ fun ResultScreen(state: UiState, actions: Actions, onAdmin: () -> Unit) {
             state.photo?.let {
                 Image(it.asImageBitmap(), contentDescription = "Druck-Version", modifier = imageModifier(fit))
             }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                SonnButton("−", primary = false, onClick = { actions.onCopies(state.copies - 1) })
-                Text("${state.copies} ${if (state.copies == 1) "Abzug" else "Abzüge"}", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                SonnButton("+", primary = false, onClick = { actions.onCopies(state.copies + 1) })
+            // Pro Foto sind insgesamt hoechstens MAX_COPIES Abzuege moeglich; waehrend des Druckens und danach ist der Knopf grau.
+            val remaining = MAX_COPIES - state.printedCopies
+            val busy = state.print is PrintState.Printing
+            if (remaining > 0) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    SonnButton("−", primary = false, enabled = !busy && state.copies > 1, onClick = { actions.onCopies(state.copies - 1) })
+                    Text("${state.copies} ${if (state.copies == 1) "Abzug" else "Abzüge"}", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    SonnButton("+", primary = false, enabled = !busy && state.copies < remaining, onClick = { actions.onCopies(state.copies + 1) })
+                }
             }
-            SonnButton("DRUCKEN", primary = true, onClick = actions.onPrint)
+            SonnButton("DRUCKEN", primary = true, enabled = !busy && remaining > 0, onClick = actions.onPrint)
+            if (remaining <= 0) {
+                Text("Es sind höchstens $MAX_COPIES Abzüge pro Foto möglich.", color = Sonn.Stone, fontSize = 14.sp)
+            } else if (state.printedCopies > 0) {
+                Text("Noch $remaining ${if (remaining == 1) "Abzug" else "Abzüge"} möglich.", color = Sonn.Stone, fontSize = 14.sp)
+            }
             when (val pr = state.print) {
                 PrintState.Idle -> Unit
                 is PrintState.Printing -> Text(pr.stage, color = Sonn.Stone, fontSize = 16.sp)
