@@ -101,3 +101,5 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
     Zeitlimit während des Druckens pausieren, Druckfehler nach dem Verlassen sichtbar machen, Dauertest/Messung, Löschregel der Upload-Warteschlange.
     Außerdem: **Drucker-Wartungsmodus** («Drucker pausieren / freigeben»: Aufträge werden gespeichert, Drucker kann abgekoppelt, ausgeschaltet oder gewartet werden, danach werden die Aufträge der Reihe nach gedruckt)
     und ein **Lösch-Knopf** (zusätzlich zum Export) für Foto-Verlauf und Warteschlange; Einzelheiten in `docs/ERKENNTNISSE-2026-11-27.md`, Abschnitt 9.1.
+    Beschlossen am 27.11.2026: Töne mit **echten Tondateien** (freie Lizenz, Quelle im Repo vermerken); Zeitlimit des Ergebnisses **einstellbar**; Aufbewahrung der Fotos auf dem Tablet **kurz** (Frist mit der Sonnhalde klären;
+    die frühere Mietbox hielt Fotos etwa 40 Tage, unklar wo). Befund: Die Nextcloud-Freigabe wird **ohne Ablaufdatum** angelegt (Traktandum 21). **Nächste Arbeit in einem neuen Chat:** Foto-Verlauf + Zeitlimit + Druckwarteschlange, dann Wartungsmodus, dann Töne.

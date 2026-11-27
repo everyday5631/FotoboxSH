@@ -4,6 +4,16 @@ Protokoll einer langen Sitzung zwischen Nutzerperson und Claude (Sitzung `sessio
 «Offene PR Review» `session_014cQ27QHKzLi7NCXwNSnLjc`). Zweck: Nichts geht verloren, wenn der Chat wechselt. Die Gerätefakten,
 Entscheidungen und die offene Liste stehen weiterhin in `docs/ENTWICKLUNG.md`; hier steht der Weg dorthin, mit Zahlen und Begründungen.
 
+## 0. Einstieg für einen neuen Chat (zuerst lesen)
+
+1. `CLAUDE.md` und `docs/ENTWICKLUNG.md` lesen, dann dieses Dokument (Abschnitte 1, 2, 8, 9 genügen für den Start).
+2. Zweig `claude/dazzling-thompson-fvlhl1` ist der Arbeitszweig (PR [#14](https://github.com/everyday5631/FotoboxSH/pull/14), Entwurf). PR #12 ist offen und ohne Konflikte mergbar; #14 enthält dessen Commits.
+   Wird #12 gemergt, mit `git merge origin/main` auf den Arbeitszweig holen (kein `reset --hard`).
+3. **Vereinbarte Reihenfolge der nächsten Arbeit** (Nutzerperson: «besser für einen neuen Chat»): zuerst **Foto-Verlauf (16) mit Zeitlimit (17) und dauerhafter Druckwarteschlange (6)**, dann **Drucker-Wartungsmodus (20)**, dann **Töne (8)**.
+   Messung/Dauertest (18) danach. **Druck und Kiosk-Beenden zuletzt testen** (Papier).
+4. Jede Aussage hier ist als gemessen, nachgerechnet oder Annahme gekennzeichnet; bei Bauvorhaben neu prüfen, nicht blind übernehmen.
+5. Offene Fragen an die Nutzerperson stehen in Abschnitt 9.2.
+
 **Kennzeichnung der Aussagen**
 
 - **gemessen**: von der Nutzerperson auf dem Tablet getestet (Bildschirm, Video, Logcat).
@@ -31,7 +41,7 @@ Grundsatz aus `CLAUDE.md` gilt weiter: Ein grüner Build heisst nur, dass der Co
 | Was | Stand |
 |---|---|
 | PR [#12](https://github.com/everyday5631/FotoboxSH/pull/12) | Entwurf, offen. Hintergrund-Auswahl beim Fotografieren, halbtransparente Vorschau, Diagnose-Zeile, weisses Logo im Ergebnis-Banner, Fix «Maske ARGB» und «pixelweise mischen». |
-| PR [#13](https://github.com/everyday5631/FotoboxSH/pull/13) | **Geschlossen, nicht gemergt** (Dokumentation als GitHub-Pages-Seite, Kategorie-Pflicht pro Seite). Ob die Seite doch gewollt ist, ist offen. Die Kategorie-Regel steht deshalb **nicht** in `CLAUDE.md` auf diesem Zweig. |
+| PR [#13](https://github.com/everyday5631/FotoboxSH/pull/13) | **Erledigt:** war für das **falsche Repository** gedacht (Dokumentation als GitHub-Pages-Seite, Kategorie-Pflicht pro Seite) und ist von der Nutzerperson geschlossen. Eine Webseite aus der Dokumentation ist für dieses Repo **nicht gewollt**; die Kategorie-Regel steht deshalb nicht in `CLAUDE.md`. Der Zweig `claude/stoic-hopper-h7zvjy` existiert noch auf GitHub (aufräumen ist Sache der Nutzerperson). |
 | PR [#14](https://github.com/everyday5631/FotoboxSH/pull/14) | Entwurf, offen, Zweig `claude/dazzling-thompson-fvlhl1`. Enthält die Commits von #12 (damit es keine Konflikte gibt) plus alles Neue unten. Wird #12 zuerst gemergt, schrumpft #14 auf die eigenen Commits. |
 | Gemergt | #8 Banner anpassbar, #11 Foto-Hintergrund und App-Icon (beide am 26.11. gemergt). |
 
@@ -263,32 +273,37 @@ ist **nicht gemessen** (frühere APKs wurden nicht aufgehoben). Das Release **`d
 6. Emoji im Banner: unterstützen (nicht verbieten). Kopfleiste: Logo, Kennzeichnung, richtiges Symbol.
 7. Eigenes Erscheinungsbild für die **Vermietung an Dritte** gewünscht (Logos je Verwendung, Reiter «Benutzerdefinitionen»), nicht dringend.
 8. Qualität der Freistellung mit echter Person: «voll okay».
+9. Töne: ja, mit echten Tondateien (freie Lizenz). Zeitlimit des Ergebnisses: einstellbar.
+10. Die Webseite aus der Dokumentation (PR #13) war für ein anderes Repo und ist erledigt.
+11. Das Werkspasswort des WCMPlus in der öffentlichen Doku: **noch nicht** entfernen (Entscheid vertagt).
+12. Reihenfolge der nächsten Arbeit gilt, aber **in einem neuen Chat**.
+13. Frühere Erfahrung mit der gemieteten Box: Fotos blieben meist etwa einen Monat, eher **40 Tage** (siehe 9.2, Aufbewahrung).
 
 ## 9. Offene Traktanden (vollständig, mit Status)
 
 | Nr. | Traktandum | Stand |
 |---|---|---|
-| 1 | **PR #12 und #14 mergen** (zuerst #12, als normaler Merge-Commit, nicht Squash; #12 ist `clean` mergbar, Basis `main` unverändert, aber noch Entwurf). PR #13 (Pages) klären, ob gewollt. | offen, Nutzerperson |
+| 1 | **PR #12 und #14 mergen** (zuerst #12, als normaler Merge-Commit, nicht Squash; #12 ist `clean` mergbar, Basis `main` unverändert, aber noch Entwurf). PR #13 ist erledigt (falsches Repo, geschlossen). | offen, Nutzerperson |
 | 2 | **Rückmeldung für Gäste auf dem Tablet testen** (Countdown-Hinweis, Bildschirm nach dem Auslösen, Taps ignoriert). | gebaut, ungetestet |
 | 3 | **Rechenzeit und Speicher genauer prüfen** (alle Punkte aus Abschnitt 7): Stresstest, `dumpsys meminfo`, Thermal, evtl. automatisches Umschalten des Haarmodells nach Zeit. | offen |
 | 4 | **Knopf «Modell neu laden» im Entwicklermodus** (Haarmodell und ML-Kit-Erkennung freigeben und neu laden; evtl. zusätzlich beim App-Start vorwärmen, damit das erste Foto nicht langsamer ist). | offen |
 | 5 | **Speicher:** Foto nach 2–3 Minuten freigeben (faktisch heute 90 s) und Fotos als Datei statt im Arbeitsspeicher halten: erst messen, dann entscheiden (Abschnitt 7.2). | offen |
 | 6 | **Druck als Pflicht (Failsafe):** Druckaufträge dürfen nicht verloren gehen: Aufträge auf dem Speicher ablegen, bei Fehler erneut versuchen, klare Meldung für das Personal. Heute: bei Fehler Meldung und Knopf «Über Android-Druckdialog drucken», keine Warteschlange für Druckaufträge. Upload bleibt davon getrennt. | offen |
 | 7 | **Upload-Warteschlange automatisch senden**, sobald Internet da ist (heute von Hand im Reiter «Warteschlange»). Hängt mit Punkt 6 zusammen. | offen (alte Liste Punkt 6) |
-| 8 | **Töne:** Tick im Countdown, Auslöse-Ton, Ton wenn das Foto fertig ist (Erfolg), evtl. Fehlerton; Schalter im Setup. Möglich ohne Dateien über `ToneGenerator`, sonst mitgelieferte Klänge. | offen |
+| 8 | **Töne** (Nutzerperson: «Vorschlag super»): Tick im Countdown, Auslöse-Ton, Ton wenn das Foto fertig ist (Erfolg), evtl. Fehlerton; Schalter im Setup. Die Nutzerperson will **richtige Tondateien**, keine einfachen Pieptöne: aus einer Bibliothek mit **freier Lizenz** (z. B. CC0, wie Kenney oder Freesound mit CC0-Filter; Verfügbarkeit und Lizenz vor dem Einbau prüfen) in `res/raw/`, Quelle und Lizenz im Repo vermerken. `ToneGenerator` nur als Rückfall. | offen |
 | 9 | **Benutzerdefinitionen / Vermietung:** eigenes Logo je Verwendung (hell: Start und Foto-Banner; dunkelblau: Kopfbalken), Texte, ggf. Farben, eigener Reiter im Setup. Das Icon ist zur Build-Zeit fest (Sonderfall). | offen, nicht dringend |
-| 10 | **Banner:** Transparenz und Druck auf Papier prüfen. | offen |
+| 10 | **Banner:** Transparenz und Druck auf Papier prüfen. Stand 27.11.: **eigenes Logo im Banner getestet und in Ordnung**; **Transparenz noch nicht getestet**; Druck folgt zuletzt. | offen (Transparenz, Druck) |
 | 11 | **Freistellung weiter beobachten:** Gruppen, blonde/helle Haare mit unveränderten Originalfotos, grosse Personenfläche; ggf. anderes Modell (Abschnitt 5.5). | offen |
 | 12 | **Haarmodell:** Lizenz der Modelldatei prüfen, App-Grösse am APK ablesen. | offen |
 | 13 | **Druck und Kiosk-Beenden testen** (WLAN-Wechsel zum Drucker, PIN, Anheften). **Zuletzt.** | offen |
 | 14 | **Zugangsdaten sicher ablegen** (Nextcloud-App-Passwort, später Power-Automate-Flow-URL): vor dem Einsatz bei der Sonnhalde zu klären. | offen (alte Liste Punkt 4) |
 | 15 | Netz-Diagnose im Setup, Konfiguration exportieren/importieren, Fische-Bild als Standard-Hintergrund, Version 1.0 und README für Dritte. | zurückgestellt (alte Liste 2, 3, 5, 7) |
-
 | 16 | **Foto-Verlauf im Entwicklermodus** («letzte ~6 Fotos»): mit Vorschau, erneut drucken, erneut hochladen, **exportieren** und **löschen** (einzeln und alle, mit PIN); Ring-Puffer und Löschregel. Anlass: Foto ist nach dem Zeitlimit weg (7.4). Ausführung in 9.1. | offen |
-| 17 | **Zeitlimit des Ergebnisses pausieren, solange gedruckt wird**; **Druckfehler nach dem Verlassen sichtbar machen** (heute wird er still verworfen), z. B. Hinweis für das Personal im Entwicklermodus. | offen |
+| 17 | **Zeitlimit des Ergebnisses einstellbar machen** (Nutzerperson: ja; heute fest 90 s), **pausieren, solange gedruckt wird**; **Druckfehler nach dem Verlassen sichtbar machen** (heute wird er still verworfen), z. B. Hinweis für das Personal im Entwicklermodus. | offen |
 | 18 | **Dauertest/Messung im Entwicklermodus** (Abschnitt 7.6). Die Nutzerperson will zuerst die übrigen Traktanden klären, danach die Messung per ADB und in der App. | offen, später |
 | 19 | **Löschregel und Speicherort der Upload-Warteschlange** entscheiden (Abschnitt 7.5); Empfehlung: intern lassen, Ansicht mit Export **und Lösch-Knopf** im Entwicklermodus (Nutzerperson: Export allein genügt nicht, es braucht auch das Löschen). | offen |
 | 20 | **Drucker-Wartungsmodus («Drucker pausieren / freigeben»):** Knopf im Entwicklermodus, damit der Drucker sicher abgekoppelt, ausgeschaltet oder gewartet werden kann (neue Papierrolle, hängende Aufträge); Aufträge bleiben gespeichert und werden nach dem Freigeben der Reihe nach gedruckt. Ausführung in 9.1. Baut auf Traktandum 6 auf. | offen |
+| 21 | **Ablaufdatum der Nextcloud-Freigabe einstellbar** (z. B. 40 Tage) und Aufräumen alter Dateien (siehe 9.2); mit dem Nextcloud-Verantwortlichen klären. | offen, Klärung nötig |
 
 ### 9.1 Ausführung der neuen Traktanden 16, 17 und 20 (Entwurf, **nichts davon ist umgesetzt**)
 
@@ -320,6 +335,15 @@ ist **nicht gemessen** (frühere APKs wurden nicht aufgehoben). Das Release **`d
   (**nicht erprobt**). **Beim Start des DNP-Systems druckt der Drucker eine Status-Seite**, also kostet ein Neustart einen Abzug.
 - *Voraussetzung:* Traktandum 6 (dauerhafte Druckaufträge mit Wiederholung) und Traktandum 16 (Fotos bleiben erhalten).
 - *Tests:* Papierrolle bei den Tests knapp; Test nach den anderen Punkten und möglichst mit wenigen Abzügen.
+
+### 9.2 Offene Fragen an die Nutzerperson und Befunde
+- **Pausierter Drucker (Traktandum 20):** Sollen Gäste auf dem Ergebnis-Bildschirm einen **Hinweis** («Ihr Foto wird später gedruckt») sehen oder soll der **Druckknopf ausgeblendet** werden? Claudes Empfehlung: Hinweis. **Unbeantwortet**, wegen Unklarheit bei der Nutzerperson (die Nummern waren in der Pull-Request-Ansicht nicht sichtbar; Traktanden stehen in der Datei dieses Dokuments und jetzt auch in der PR-Beschreibung).
+- **Aufbewahrung, Klärung nötig:** Die Nutzerperson nannte als Erfahrung der gemieteten Box «meist um einen Monat, eher 40 Tage». Unklar ist, **was** damals so lange blieb: die Fotos auf dem Gerät, die Download-Links oder die Dateien in der Cloud?
+  Für den **Foto-Verlauf auf dem Tablet** (Traktandum 16) sind 40 Tage mehr als nötig und aus Datenschutzgründen eher zu lang; für die **Download-Links** (QR-Code) wäre ein fester Ablauf sinnvoll.
+- **Befund Nextcloud (aus dem Code, nachgerechnet):** `NextcloudUploader` legt den öffentlichen Link **ohne Ablaufdatum** an (nur `path`, `shareType=3`, `permissions=1`, kein `expireDate`, kein Passwort). Wie lange ein QR-Link gilt, bestimmt also allein
+  die Einstellung des Nextcloud-Servers (Administrator kann ein Standard-Ablaufdatum vorgeben; welches gilt, ist **nicht geprüft**). Die App löscht hochgeladene Dateien nie. Mögliches Traktandum: Ablaufdatum der Freigabe (z. B. 40 Tage) einstellbar machen
+  und Dateien nach der Frist serverseitig aufräumen lassen. Entscheid der Nutzerperson und Absprache mit dem Nextcloud-Verantwortlichen nötig.
+- **Sicherheit:** Entscheid vertagt (Abschnitt 8, Punkt 11).
 
 **Sicherheitshinweis:** Das Repository ist laut Beschreibung von PR #13 **öffentlich**. In der Dokumentation steht das **Werkspasswort des WCMPlus-Hotspots**; laut `CLAUDE.md` gehören keine WLAN-Passwörter ins Repository.
 Ob es entfernt wird (und die Historie bereinigt), ist offen. Keine neuen Zugangsdaten eintragen.
