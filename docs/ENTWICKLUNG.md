@@ -97,3 +97,5 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
     (Stresstest, `dumpsys meminfo`, Thermal); Knopf «Modell neu laden» im Entwicklermodus; **Druck als Pflicht** (Druckaufträge auf dem Speicher ablegen, erneut versuchen, Meldung ans Personal);
     Upload-Warteschlange automatisch senden; **Töne** (Countdown, Auslösen, fertig); Banner-Transparenz und Druck prüfen; Lizenz der Haarmodell-Datei und App-Grösse; PR #12 und #14 mergen.
     **Druck und Kiosk-Beenden zuletzt testen** (Fotopapier knapp, jeder Systemstart des DNP druckt eine Status-Seite).
+    Dazu (Abschnitte 7.4 bis 7.7): **Foto-Verlauf** der letzten ~6 Fotos im Entwicklermodus mit erneutem Drucken/Hochladen (heute ist das Foto nach dem 90-s-Zeitlimit weg und es gibt keinen erneuten Druck),
+    Zeitlimit während des Druckens pausieren, Druckfehler nach dem Verlassen sichtbar machen, Dauertest/Messung, Löschregel der Upload-Warteschlange.

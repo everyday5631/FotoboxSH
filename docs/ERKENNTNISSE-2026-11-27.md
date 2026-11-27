@@ -209,6 +209,51 @@ Die Nutzerperson will **alle Punkte unter 2 später noch genauer prüfen** (Absc
 20–30 Fotos hintereinander (auch mit Gästen, Gruppen), Tablet warm; danach `Freistellung … ms` im Log (oder die Diagnose-Zeile) vergleichen, `dumpsys meminfo` vor und nach den Fotos, `dumpsys thermalservice`.
 Wenn es zu lange dauert: «Haarmodell verwenden» ausschalten und erneut messen. Ein automatisches Umschalten nach Zeit gibt es **nicht**.
 
+### 7.4 Lücke beim Drucken nach dem Zeitlimit (aus dem Code, nachgerechnet; auf dem Tablet **noch nicht** nachgestellt)
+Frage der Nutzerperson: Was, wenn der Weg zum Drucker und zurück ins WLAN länger dauert als die 90 Sekunden und das Foto dann weg ist? **Antwort: Das ist eine echte Lücke.**
+- Das Ergebnis geht nach 90 s zurück zum Start. Der Zeitgeber startet bei jeder Zustandsänderung neu (`LaunchedEffect(photo, print, upload)`); die Druck-Schritte («Verbinde mit Drucker-WLAN …», «Foto wird gedruckt …», «Zurück ins Internet-WLAN …»)
+  setzen ihn zurück. **Eine Phase ohne Zustandswechsel länger als 90 s** (Android-Abfrage «Verbinden» bleibt unbestätigt, Drucker antwortet bis zum Lese-Timeout von 90 s nicht) lässt den Gast trotzdem zum Start springen.
+- Der Druckauftrag läuft im Hintergrund weiter, `photo` und `photoJpeg` sind danach aber weg. **Schlägt der Druck nach dem Verlassen fehl, sieht ihn niemand**, und es gibt **keinen erneuten Druck**.
+- Es gibt **keine Liste der letzten Fotos** und keinen Entwickler-Bereich zum erneuten Drucken. Die **Druck-Version wird nirgends gespeichert**. Die digitale Version liegt nach erfolgreichem Upload in Nextcloud (bzw. in der Warteschlange).
+- Folge für die Planung: Traktanden 6, 16 und 17 in Abschnitt 9 (Druck als Pflicht, Foto-Verlauf mit erneutem Drucken, Zeitlimit während des Druckens pausieren).
+
+### 7.5 Upload-Warteschlange: Speicherort und Löschen (aus dem Code)
+- Ort: `files/upload-queue/` im **App-internen Speicher** (`/data/data/ch.sonnhalde.fotobox/files/…`), nicht im geteilten Bereich `/storage/emulated/0/`. Beides ist derselbe Flash-Speicher; «intern» heisst nur: privat für die App.
+- Es kommen nur **digitale** Fotos hinein, **wenn der Upload fehlschlägt**: beim Verlassen des Ergebnisses mit Status «fehlgeschlagen» oder wenn der Upload erst nach dem Verlassen scheitert.
+- **Löschen:** `retryQueue()` löscht eine Datei **nach erfolgreichem Senden**, `clearQueue()` («Warteschlange leeren» im Reiter) löscht alle. **Von allein verschwindet nichts**, es gibt keine Aufbewahrungsdauer.
+  Bei dauerhaft fehlendem Internet wächst die Warteschlange (je ~1 MB). Speicherplatz ist bei 256 GB kein Problem, aber Aufbewahrung von Gästefotos über Tage ist eine Datenschutzfrage der Sonnhalde.
+- Abholen der Dateien von Hand (Debug-Build): `./adb shell run-as ch.sonnhalde.fotobox ls files/upload-queue`, einzeln `./adb exec-out run-as ch.sonnhalde.fotobox cat files/upload-queue/NAME.jpg > NAME.jpg`. Geht nur bei Debug-Builds.
+
+**Intern oder geteilter Speicher (`/storage/emulated/0/…`)?** Einschätzung von Claude, nicht getestet:
+
+| | Intern (heute) | Geteilter Speicher (z. B. `Pictures/` oder `Download/`) | App-eigener externer Ordner (`/Android/data/…/files`) |
+|---|---|---|---|
+| Berechtigung | keine | je nach Android-Version Medien-/Dateizugriff, `MediaStore` für Bilder | keine |
+| Sichtbar im Dateimanager und am PC | nein (nur ADB, Debug) | ja, für alle Apps und Nutzer des Tablets | am PC per USB meist ja, Android 11+ sperrt andere Apps |
+| Galerie und andere Apps | sehen es nicht | **Galerie zeigt die Fotos**, andere Apps mit Zugriff können sie lesen | Galerie kann es erfassen, mit `.nomedia`-Datei verhindern |
+| Datenschutz (Gästefotos im Pflegezentrum) | am besten | **am schwächsten** | mittel |
+| Bleibt nach Deinstallation | nein | ja (MediaStore) | nein |
+| Aufwand | keiner | mittel (Berechtigungen, Aufräumen) | gering |
+
+Empfehlung: **intern lassen** und im Entwicklermodus eine **Ansicht mit Export** bauen (Foto antippen, «Teilen/Speichern»), statt die Fotos dauerhaft für alle Apps sichtbar abzulegen.
+Dazu eine **Löschregel** (z. B. nach erfolgreichem Senden und höchstens 24 h bzw. nur die letzten N Fotos). Die Entscheidung liegt bei der Nutzerperson; Datenschutzfragen klärt die Sonnhalde.
+
+### 7.6 Messbarkeit
+Ja, auf zwei Wegen (Traktandum 3 und 18):
+- **Von Hand mit ADB** (sofort möglich, nicht an einem Gerät erprobt, Ausgabeformat der `dumpsys`-Befehle kann je nach Android-Version abweichen):
+  ```bash
+  while true; do date +%T; ./adb shell dumpsys meminfo ch.sonnhalde.fotobox | grep -E "TOTAL PSS|Java Heap|Native Heap"; ./adb shell dumpsys battery | grep -i temperature; ./adb shell dumpsys thermalservice | grep -i "thermal status"; sleep 5; done | tee messung.txt
+  ```
+  Dazu im Log die Zeilen `Freistellung … ms`.
+- **In der App (Entwicklermodus, noch nicht gebaut):** «Dauertest»: ein gespeichertes Testfoto N-mal durch die Freistellung schicken und je Lauf Dauer, Java-/Native-Heap
+  (`Runtime`, `Debug.getNativeHeapAllocatedSize`), Thermal-Status (`PowerManager.getCurrentThermalStatus`, Stufen 0–6, ab Android 10) und Akkutemperatur (`BatteryManager`) aufzeichnen und als Zusammenfassung anzeigen.
+  Grenze: Die Temperatur des Prozessors selbst ist für Apps nicht lesbar; der Thermal-Status ist grob.
+
+### 7.7 App-Grösse und APK
+Das Debug-APK aus dem Build `29e316a` (Code gleich wie `529f7cf`) ist **124 707 957 Byte (rund 119 MB)** gross, mit allen Prozessor-Architekturen, nicht verkleinert. Wie viel davon TensorFlow Lite und das Haarmodell ausmachen,
+ist **nicht gemessen** (frühere APKs wurden nicht aufgehoben). Das Release **`dev-build`** (Pre-Release) enthält immer das APK des **letzten Pushs auf irgendeinem Zweig**, direkt installierbar:
+`https://github.com/everyday5631/FotoboxSH/releases/download/dev-build/Sonnhalde-Fotobox-debug.apk`. Es wird bei jedem Push überschrieben (auch von Doku-Commits); die Versionsanzeige im Setup nennt den Commit.
+
 ## 8. Entscheidungen der Nutzerperson (heute)
 1. Rückkamera-Schalter im Setup **bleibt** (Notlösung bei Kamera-Verwechslung).
 2. **Haarmodell bleibt**, mit Schalter zum Ausschalten.
@@ -223,7 +268,7 @@ Wenn es zu lange dauert: «Haarmodell verwenden» ausschalten und erneut messen.
 
 | Nr. | Traktandum | Stand |
 |---|---|---|
-| 1 | **PR #12 und #14 mergen** (zuerst #12). PR #13 (Pages) klären, ob gewollt. | offen, Nutzerperson |
+| 1 | **PR #12 und #14 mergen** (zuerst #12, als normaler Merge-Commit, nicht Squash; #12 ist `clean` mergbar, Basis `main` unverändert, aber noch Entwurf). PR #13 (Pages) klären, ob gewollt. | offen, Nutzerperson |
 | 2 | **Rückmeldung für Gäste auf dem Tablet testen** (Countdown-Hinweis, Bildschirm nach dem Auslösen, Taps ignoriert). | gebaut, ungetestet |
 | 3 | **Rechenzeit und Speicher genauer prüfen** (alle Punkte aus Abschnitt 7): Stresstest, `dumpsys meminfo`, Thermal, evtl. automatisches Umschalten des Haarmodells nach Zeit. | offen |
 | 4 | **Knopf «Modell neu laden» im Entwicklermodus** (Haarmodell und ML-Kit-Erkennung freigeben und neu laden; evtl. zusätzlich beim App-Start vorwärmen, damit das erste Foto nicht langsamer ist). | offen |
@@ -238,6 +283,11 @@ Wenn es zu lange dauert: «Haarmodell verwenden» ausschalten und erneut messen.
 | 13 | **Druck und Kiosk-Beenden testen** (WLAN-Wechsel zum Drucker, PIN, Anheften). **Zuletzt.** | offen |
 | 14 | **Zugangsdaten sicher ablegen** (Nextcloud-App-Passwort, später Power-Automate-Flow-URL): vor dem Einsatz bei der Sonnhalde zu klären. | offen (alte Liste Punkt 4) |
 | 15 | Netz-Diagnose im Setup, Konfiguration exportieren/importieren, Fische-Bild als Standard-Hintergrund, Version 1.0 und README für Dritte. | zurückgestellt (alte Liste 2, 3, 5, 7) |
+
+| 16 | **Foto-Verlauf im Entwicklermodus:** die letzten ~6 Fotos (Druck- und digitale Version) auf dem internen Speicher, mit Vorschau, «Erneut drucken», «Erneut hochladen», «Löschen/Exportieren»; Löschregel (älteste verdrängen, nach Erfolg und spätestens nach ~24 h). Anlass: Foto ist nach dem Zeitlimit weg (Abschnitt 7.4). | offen |
+| 17 | **Zeitlimit des Ergebnisses pausieren, solange gedruckt wird**; **Druckfehler nach dem Verlassen sichtbar machen** (heute wird er still verworfen), z. B. Hinweis für das Personal im Entwicklermodus. | offen |
+| 18 | **Dauertest/Messung im Entwicklermodus** (Abschnitt 7.6). | offen |
+| 19 | **Löschregel und Speicherort der Upload-Warteschlange** entscheiden (Abschnitt 7.5); Empfehlung: intern lassen, Ansicht mit Export im Entwicklermodus. | offen |
 
 **Sicherheitshinweis:** Das Repository ist laut Beschreibung von PR #13 **öffentlich**. In der Dokumentation steht das **Werkspasswort des WCMPlus-Hotspots**; laut `CLAUDE.md` gehören keine WLAN-Passwörter ins Repository.
 Ob es entfernt wird (und die Historie bereinigt), ist offen. Keine neuen Zugangsdaten eintragen.
