@@ -72,4 +72,11 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
 5. Fische-Bild als Standard-Hintergrund (`start_background.jpg`), Datei steht noch aus.
 6. Warteschlange automatisch senden, sobald Internet da ist: **bewusst offen gelassen**.
 7. Version 1.0 ausweisen, README für Dritte: **bewusst offen gelassen**.
-8. Banner (PR #8) und Foto-Hintergrund/Icon (PR #11) auf dem Tablet testen.
+8. Banner (PR #8) und Foto-Hintergrund/Icon (PR #11) auf dem Tablet testen. Stand 27.11.2026 (Build 0.1.99): Banner mit Text links/rechts und eigenem Logo,
+   Icon und Foto-Hintergrund laufen (Qualität der Freistellung mässig, Verbesserung offen: Schwellen, Maskenrand, ggf. anderes Modell; erst mit echten Personen testen).
+   Noch ungeprüft: Banner-Transparenz und Druck auf Papier.
+9. **Anpassbares Erscheinungsbild für Vermietung an Dritte** («Benutzerdefinitionen», nicht dringend, aber geplant): Die Fotobox soll an andere vermietet werden können,
+   deshalb darf nichts Sonnhalde-spezifisch fest eingebaut sein. Heute fest in der App: `sonnhalde_logo_vertical` (Startbildschirm, Kamera-Bildschirm),
+   `sonnhalde_logo_zusatz_neg` (weisses Logo im dunklen Kopfbalken der App), Icon und Farben. Gewünscht: eigenes Logo je Verwendung, weil dieselbe Datei nicht überall passt
+   (Logo für hellen Grund: Startbildschirm und Foto-Banner; Logo für Dunkelblau: Kopfbalken der App), dazu ein eigener Reiter «Benutzerdefinitionen» im Setup, der
+   Logos, Texte und ggf. Farben bündelt. Das Logo im Foto-Banner ist bereits einstellbar (Banner-Einstellungen).
