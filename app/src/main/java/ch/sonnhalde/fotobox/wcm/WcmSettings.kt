@@ -1,6 +1,7 @@
 package ch.sonnhalde.fotobox.wcm
 
 import android.content.Context
+import ch.sonnhalde.fotobox.photo.Graphemes
 
 /** Einstellungen (WCMPlus-Drucker und SharePoint-Upload), lokal auf dem Geraet gespeichert. */
 data class WcmConfig(
@@ -115,8 +116,8 @@ class WcmSettings(context: Context) {
             .putString("printerUri", config.printerUri.trim())
             .putBoolean("autoPrint", config.autoPrint)
             .putBoolean("useFrontCamera", config.useFrontCamera)
-            .putString("bannerText", config.bannerText.take(28))
-            .putString("bannerTextLeft", config.bannerTextLeft.take(28))
+            .putString("bannerText", Graphemes.take(config.bannerText, 28))
+            .putString("bannerTextLeft", Graphemes.take(config.bannerTextLeft, 28))
             .putString("bannerColor", config.bannerColor)
             .putInt("bannerAlpha", config.bannerAlpha.coerceIn(0, 100))
             .putBoolean("bannerDigital", config.bannerDigital)
@@ -140,8 +141,8 @@ class WcmSettings(context: Context) {
             .putString("ncUser", config.ncUser.trim())
             .putString("ncPassword", config.ncPassword)
             .putString("ncFolder", config.ncFolder.trim().trim('/'))
-            .putString("startTitle", config.startTitle.take(60))
-            .putString("startButton", config.startButton.take(24))
+            .putString("startTitle", Graphemes.take(config.startTitle, 60))
+            .putString("startButton", Graphemes.take(config.startButton, 24))
             .apply()
     }
 }
