@@ -11,7 +11,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -80,12 +82,17 @@ fun ResultScreen(state: UiState, actions: Actions, onAdmin: () -> Unit) {
     LaunchedEffect(state.photo, state.print, state.upload) { delay(RESULT_TIMEOUT_MS); actions.onHome() }
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
+    // Bild eines Blocks: im Querformat (fit) bekommt es nur den Platz, der neben QR-Code bzw. Druckknopf bleibt,
+    // und wird massstabsgetreu verkleinert, damit nichts gescrollt werden muss; sonst volle Breite.
+    fun ColumnScope.imageModifier(fit: Boolean) =
+        (if (fit) Modifier.weight(1f, fill = false) else Modifier.fillMaxWidth()).border(1.dp, Sonn.Line, MaterialShape)
+
     @Composable
-    fun digitalBlock(modifier: Modifier) {
+    fun digitalBlock(modifier: Modifier, fit: Boolean = false) {
         Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text("DIGITALE VERSION", color = Sonn.Stone, fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
             state.digital?.let {
-                Image(it.asImageBitmap(), contentDescription = "Digitale Version", modifier = Modifier.fillMaxWidth().border(1.dp, Sonn.Line, MaterialShape))
+                Image(it.asImageBitmap(), contentDescription = "Digitale Version", modifier = imageModifier(fit))
             }
             when (val u = state.upload) {
                 UploadState.Idle, UploadState.Uploading -> Text("QR-Code wird erstellt …", color = Sonn.Stone, fontSize = 16.sp)
@@ -104,11 +111,11 @@ fun ResultScreen(state: UiState, actions: Actions, onAdmin: () -> Unit) {
     }
 
     @Composable
-    fun printBlock(modifier: Modifier) {
+    fun printBlock(modifier: Modifier, fit: Boolean = false) {
         Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text("DRUCK-VERSION", color = Sonn.Stone, fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
             state.photo?.let {
-                Image(it.asImageBitmap(), contentDescription = "Druck-Version", modifier = Modifier.fillMaxWidth().border(1.dp, Sonn.Line, MaterialShape))
+                Image(it.asImageBitmap(), contentDescription = "Druck-Version", modifier = imageModifier(fit))
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 SonnButton("−", primary = false, onClick = { actions.onCopies(state.copies - 1) })
@@ -134,12 +141,13 @@ fun ResultScreen(state: UiState, actions: Actions, onAdmin: () -> Unit) {
         state.backgroundNote?.let { Notice(it) }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             if (landscape) {
+                // Querformat (Tablet): alles auf einem Bildschirm, ohne Scrollen. Der Haken unten rechts ueberdeckt nur den freien Rand.
                 Row(
-                    Modifier.fillMaxSize().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(start = 24.dp, end = 24.dp, top = 20.dp, bottom = 120.dp),
+                    Modifier.fillMaxSize().navigationBarsPadding().padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(32.dp),
                 ) {
-                    digitalBlock(Modifier.weight(1f))
-                    printBlock(Modifier.weight(1f))
+                    digitalBlock(Modifier.weight(1f).fillMaxHeight(), fit = true)
+                    printBlock(Modifier.weight(1f).fillMaxHeight(), fit = true)
                 }
             } else {
                 Column(
