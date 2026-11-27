@@ -7,8 +7,9 @@ Entscheidungen und die offene Liste stehen weiterhin in `docs/ENTWICKLUNG.md`; h
 ## 0. Einstieg für einen neuen Chat (zuerst lesen)
 
 1. `CLAUDE.md` und `docs/ENTWICKLUNG.md` lesen, dann dieses Dokument (Abschnitte 1, 2, 8, 9 genügen für den Start).
-2. Zweig `claude/dazzling-thompson-fvlhl1` ist der Arbeitszweig (PR [#14](https://github.com/everyday5631/FotoboxSH/pull/14), Entwurf). PR #12 ist offen und ohne Konflikte mergbar; #14 enthält dessen Commits.
-   Wird #12 gemergt, mit `git merge origin/main` auf den Arbeitszweig holen (kein `reset --hard`).
+2. **PR #12 und PR #14 sind gemergt** (#12 am 27.11. um 11:14, #14 um 12:57; `main` = `c347c24`, Build-Lauf 127, in der App «Version 0.1.127 (c347c24)»). Der Zweig `claude/dazzling-thompson-fvlhl1`
+   wurde danach mit `git merge --ff-only origin/main` auf `main` vorgespult; **für neue Arbeit gilt ein neuer Entwurf-PR** (Zweigname wird vom Chat vorgegeben). Immer zuerst den echten Stand prüfen
+   (`list_pull_requests`, `git log origin/main`), nicht diesem Satz trauen.
 3. **Vereinbarte Reihenfolge der nächsten Arbeit** (Nutzerperson: «besser für einen neuen Chat»): zuerst **Foto-Verlauf (16) mit Zeitlimit (17) und dauerhafter Druckwarteschlange (6)**, dann **Drucker-Wartungsmodus (20)**, dann **Töne (8)**.
    Messung/Dauertest (18) danach. **Druck und Kiosk-Beenden zuletzt testen** (Papier).
 4. Jede Aussage hier ist als gemessen, nachgerechnet oder Annahme gekennzeichnet; bei Bauvorhaben neu prüfen, nicht blind übernehmen.
@@ -41,9 +42,9 @@ Grundsatz aus `CLAUDE.md` gilt weiter: Ein grüner Build heisst nur, dass der Co
 
 | Was | Stand |
 |---|---|
-| PR [#12](https://github.com/everyday5631/FotoboxSH/pull/12) | Entwurf, offen. Hintergrund-Auswahl beim Fotografieren, halbtransparente Vorschau, Diagnose-Zeile, weisses Logo im Ergebnis-Banner, Fix «Maske ARGB» und «pixelweise mischen». |
+| PR [#12](https://github.com/everyday5631/FotoboxSH/pull/12) | **Gemergt am 27.11. 11:14** (Merge-Commit `3dba8e2`). Hintergrund-Auswahl beim Fotografieren, halbtransparente Vorschau, Diagnose-Zeile, weisses Logo im Ergebnis-Banner, Fix «Maske ARGB» und «pixelweise mischen». |
 | PR [#13](https://github.com/everyday5631/FotoboxSH/pull/13) | **Erledigt:** war für das **falsche Repository** gedacht (Dokumentation als GitHub-Pages-Seite, Kategorie-Pflicht pro Seite) und ist von der Nutzerperson geschlossen. Eine Webseite aus der Dokumentation ist für dieses Repo **nicht gewollt**; die Kategorie-Regel steht deshalb nicht in `CLAUDE.md`. Der Zweig `claude/stoic-hopper-h7zvjy` existiert noch auf GitHub (aufräumen ist Sache der Nutzerperson). |
-| PR [#14](https://github.com/everyday5631/FotoboxSH/pull/14) | Entwurf, offen, Zweig `claude/dazzling-thompson-fvlhl1`. Enthält die Commits von #12 (damit es keine Konflikte gibt) plus alles Neue unten. Wird #12 zuerst gemergt, schrumpft #14 auf die eigenen Commits. |
+| PR [#14](https://github.com/everyday5631/FotoboxSH/pull/14) | **Gemergt am 27.11. 12:57** (Merge-Commit `c347c24`, Build-Lauf 127 grün). Enthielt die Commits von #12 plus alles Neue unten. Das Release `dev-build` (Pre-Release, von GitHub Actions) enthält diese APK, wird aber bei **jedem** Push auf irgendeinem Zweig überschrieben. |
 | Gemergt | #8 Banner anpassbar, #11 Foto-Hintergrund und App-Icon (beide am 26.11. gemergt). |
 
 **Versionsnummern auf dem Tablet** (Anzeige «Version 0.1.N (Commit)», N = Lauf-Nummer von GitHub Actions; Push- und PR-Lauf eines Commits haben je eine Nummer):
@@ -57,7 +58,7 @@ Grundsatz aus `CLAUDE.md` gilt weiter: Ein grüner Build heisst nur, dass der Co
 | 0.1.113 | `2ba8e94` | Haarmodell, enge Schwellen 0.40/0.60, Emoji, Kopfleiste |
 | höher als 0.1.113 | `529f7cf` | Rückmeldung nach dem Auslösen, Schalter Haarmodell, Dauer in der Diagnose-Zeile |
 
-Commit-Reihenfolge auf PR #14 (neueste oben): `529f7cf` Rückmeldung/Schalter, `2ba8e94` Emoji/Kopfleiste, `53900e7` Doku, `35029fc` Haarmodell,
+Commit-Reihenfolge auf PR #14 (neueste oben; alles in `main` seit `c347c24`): `529f7cf` Rückmeldung/Schalter, `2ba8e94` Emoji/Kopfleiste, `53900e7` Doku, `35029fc` Haarmodell,
 `8eae85f` Kompilierfehler `MaskMath`, `e790e15` zweiter Durchgang + Guided Filter, `399142e` Doku Punkt 9, `f780afd` Layout ohne Scrollen.
 
 Dateien dieser Sitzung: `photo/BackgroundRemover.kt` (Ablauf), `photo/MaskMath.kt` (Rechenteile, ohne Android-Klassen), `photo/HairModel.kt`
@@ -288,7 +289,7 @@ ist **nicht gemessen** (frühere APKs wurden nicht aufgehoben). Das Release **`d
 
 | Nr. | Traktandum | Stand |
 |---|---|---|
-| 1 | **PR #12 und #14 mergen** (zuerst #12, als normaler Merge-Commit, nicht Squash; #12 ist `clean` mergbar, Basis `main` unverändert, aber noch Entwurf). PR #13 ist erledigt (falsches Repo, geschlossen). | offen, Nutzerperson |
+| 1 | ~~PR #12 und #14 mergen~~ **erledigt am 27.11.** (PR #13 war das falsche Repo, geschlossen). Offen bleibt nur, ob aus dem Stand `c347c24` ein **dauerhaftes Pre-Release** (benannter Tag, z. B. `v0.2.0-rc1`) im Browser veröffentlicht wird; `dev-build` wird laufend überschrieben. | erledigt / Nutzerperson |
 | 2 | **Rückmeldung für Gäste auf dem Tablet testen** (Countdown-Hinweis, Bildschirm nach dem Auslösen, Taps ignoriert). | gebaut, ungetestet |
 | 3 | **Rechenzeit und Speicher genauer prüfen** (alle Punkte aus Abschnitt 7): Stresstest, `dumpsys meminfo`, Thermal, evtl. automatisches Umschalten des Haarmodells nach Zeit. | offen |
 | 4 | **Knopf «Modell neu laden» im Entwicklermodus** (Haarmodell und ML-Kit-Erkennung freigeben und neu laden; evtl. zusätzlich beim App-Start vorwärmen, damit das erste Foto nicht langsamer ist). | offen |
@@ -309,6 +310,7 @@ ist **nicht gemessen** (frühere APKs wurden nicht aufgehoben). Das Release **`d
 | 19 | **Löschregel und Speicherort der Upload-Warteschlange** entscheiden (Abschnitt 7.5); Empfehlung: intern lassen, Ansicht mit Export **und Lösch-Knopf** im Entwicklermodus (Nutzerperson: Export allein genügt nicht, es braucht auch das Löschen). | offen |
 | 20 | **Drucker-Wartungsmodus («Drucker pausieren / freigeben»):** Knopf im Entwicklermodus, damit der Drucker sicher abgekoppelt, ausgeschaltet oder gewartet werden kann (neue Papierrolle, hängende Aufträge); Aufträge bleiben gespeichert und werden nach dem Freigeben der Reihe nach gedruckt. Ausführung in 9.1. Baut auf Traktandum 6 auf. | offen |
 | 21 | **Ablaufdatum der Nextcloud-Freigabe einstellbar** (z. B. 40 Tage) und Aufräumen alter Dateien (siehe 9.2); mit dem Nextcloud-Verantwortlichen klären. | offen, Klärung nötig |
+| 22 | **Automatische Update-Prüfung:** Neue APK-Versionen soll das Gerät selbst erkennen, entweder über **Obtainium** (App-Store-Ersatz für GitHub-Releases) oder **eigenständig in der Fotobox-App**. Entscheid und Ausführung in 9.3. | offen, Entscheid nötig |
 
 ### 9.1 Ausführung der neuen Traktanden 16, 17 und 20 (Entwurf, **nichts davon ist umgesetzt**)
 
@@ -350,6 +352,31 @@ ist **nicht gemessen** (frühere APKs wurden nicht aufgehoben). Das Release **`d
   die Einstellung des Nextcloud-Servers (Administrator kann ein Standard-Ablaufdatum vorgeben; welches gilt, ist **nicht geprüft**). Die App löscht hochgeladene Dateien nie. Mögliches Traktandum: Ablaufdatum der Freigabe (z. B. 40 Tage) einstellbar machen
   und Dateien nach der Frist serverseitig aufräumen lassen. Entscheid der Nutzerperson und Absprache mit dem Nextcloud-Verantwortlichen nötig.
 - **Sicherheit:** Entscheid vertagt (Abschnitt 8, Punkt 11).
+
+### 9.3 Traktandum 22: Automatische Update-Prüfung (Wunsch der Nutzerperson am Ende der Sitzung; **nichts davon ist umgesetzt oder geprüft**)
+
+Ziel: Das Tablet merkt von selbst, dass es eine neuere Version gibt, damit nicht jedes Mal von Hand eine APK geladen werden muss. Zwei Wege, Einschätzung von Claude (Aussagen zu Obtainium und Android sind **Annahmen aus Claudes Kenntnis**, vor dem Bauen zu prüfen):
+
+**Weg A: Obtainium** (separate Open-Source-App, holt Updates direkt aus GitHub-Releases)
+- Vorteil: **kein Code in der Fotobox-App nötig**, Prüfintervall und Benachrichtigung stellt Obtainium selbst ein; die Fotobox bleibt schlank.
+- Voraussetzung: **benannte Releases** mit APK. Das Release `dev-build` hat immer **denselben Tag**; eine Versionserkennung über den Tag kann dort keine neue Version sehen. Für Obtainium wären Releases mit steigendem Tag (`vX.Y.Z`, auch `-rc1`) sinnvoll,
+  über den vorhandenen Workflow `release.yml` oder von Hand im Browser. Ob Obtainium Pre-Releases und die APK-Versionsnummer wie gewünscht auswertet, ist **nicht geprüft**.
+- Nachteil: zweite App auf dem Kiosk-Tablet; Updates müssen vom Personal bestätigt werden (Android fragt beim Installieren), und der Installationsdialog kann im **angehefteten** Kiosk-Modus blockiert sein (erst Anheften lösen, PIN).
+
+**Weg B: eigenständig in der Fotobox-App** («Nach Updates suchen» im Entwicklermodus, hinter der PIN)
+- Ablauf: App fragt die GitHub-API des öffentlichen Repos nach dem neuesten Release (kein Zugangsdaten nötig; ohne Anmeldung gilt ein Anfrage-Limit von 60 pro Stunde), vergleicht mit der eigenen Version (`BuildConfig`), zeigt «Update verfügbar», lädt die APK
+  und startet die Installation über den Android-Installer.
+- Android verlangt dafür die Berechtigung «Unbekannte Apps installieren» und eine **Bestätigung durch die Person** am Gerät; eine stille Installation geht nur als Geräte-Eigentümer-App (Device Owner) oder mit besonderen Rechten (Annahme, nicht geprüft).
+- **Sicherheitsrisiko:** Das Signaturzertifikat `app/debug.keystore` ist **öffentlich im Repository**. Android prüft bei einem Update nur, dass die Signatur zur installierten App passt, und diese Signatur kann jeder nachbauen. Eine Update-Funktion, die APKs aus dem Netz lädt,
+  braucht deshalb eine **eigene Prüfung** (z. B. SHA-256 aus einer vertrauenswürdigen Quelle) oder ein **privates Release-Zertifikat** (Wechsel erfordert Deinstallation auf allen Tablets, siehe `docs/RELEASE.md`). Ohne das ist ein automatisches Update ein Einfallstor.
+- Mehr Aufwand und Pflege als Weg A; dafür volle Kontrolle (Zeitfenster, Hinweis nur im Entwicklermodus, nie mitten im Anlass).
+
+**Gemeinsames:**
+- Android erlaubt **kein Downgrade**; jede neue APK braucht einen höheren `versionCode` (`build.yml` und `release.yml` sorgen dafür). Spätere Dev-Builds können niedriger als ein Release sein.
+- Update nie während eines Anlasses; bei der Fotobox nur mit Aufsicht, Ergebnis danach testen.
+- Fragen an die Nutzerperson: Reicht eine **manuelle Prüfung** («Nach Updates suchen») oder soll es **automatisch** laufen (z. B. nachts im Leerlauf)? Soll ein **Stable**- und ein **Pre-Release**-Kanal getrennt werden? Wer bestätigt am Tablet?
+  Ist ein eigenes Release-Zertifikat gewünscht (hängt mit Traktandum 14 und der Sicherheit zusammen)?
+- Empfehlung von Claude zum Start: zuerst **Weg A (Obtainium)** mit benannten Pre-Releases ausprobieren (kein Code, geringes Risiko); eine eigene Update-Funktion erst bauen, wenn ein privates Zertifikat und eine Prüfsumme feststehen.
 
 **Sicherheitshinweis:** Das Repository ist laut Beschreibung von PR #13 **öffentlich**. In der Dokumentation steht das **Werkspasswort des WCMPlus-Hotspots**; laut `CLAUDE.md` gehören keine WLAN-Passwörter ins Repository.
 Ob es entfernt wird (und die Historie bereinigt), ist offen. Keine neuen Zugangsdaten eintragen.
