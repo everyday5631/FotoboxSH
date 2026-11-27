@@ -59,6 +59,10 @@ data class WcmConfig(
     val ncUrl: String = "",
     val ncUser: String = "",
     val ncPassword: String = "",
+    /** Gueltigkeit des Download-Links (QR-Code) in Stunden; 0 = kein Ablauf. Nextcloud kennt nur ganze Tage, siehe [NextcloudUploader]. */
+    val ncShareHours: Int = DEFAULT_SHARE_HOURS,
+    /** Freigabe-Links nach Ablauf der Gueltigkeit widerrufen (Link loeschen, Foto bleibt); macht die Frist stundengenau. */
+    val ncRevokeLinks: Boolean = true,
     val ncFolder: String = "Fotobox",
     val startTitle: String = "Ein Moment für Sie und Ihre Liebsten",
     val startButton: String = "jetzt starten",
@@ -72,6 +76,8 @@ data class WcmConfig(
     companion object {
         /** Standardadresse des WCMPlus-Portals (laut Anleitung 192.168.4.1). */
         const val DEFAULT_BASE_URL = "http://192.168.4.1"
+        /** Standard-Gueltigkeit der Nextcloud-Freigabe in Stunden. */
+        const val DEFAULT_SHARE_HOURS = 12
     }
 }
 
@@ -111,6 +117,8 @@ class WcmSettings(context: Context) {
         ncUrl = prefs.getString("ncUrl", "").orEmpty(),
         ncUser = prefs.getString("ncUser", "").orEmpty(),
         ncPassword = prefs.getString("ncPassword", "").orEmpty(),
+        ncShareHours = prefs.getInt("ncShareHours", WcmConfig.DEFAULT_SHARE_HOURS).coerceIn(0, 24 * 365),
+        ncRevokeLinks = prefs.getBoolean("ncRevokeLinks", true),
         ncFolder = prefs.getString("ncFolder", "Fotobox").orEmpty(),
         startTitle = prefs.getString("startTitle", WcmConfig().startTitle).orEmpty(),
         startButton = prefs.getString("startButton", WcmConfig().startButton).orEmpty(),
@@ -153,6 +161,8 @@ class WcmSettings(context: Context) {
             .putString("ncUrl", config.ncUrl.trim())
             .putString("ncUser", config.ncUser.trim())
             .putString("ncPassword", config.ncPassword)
+            .putInt("ncShareHours", config.ncShareHours.coerceIn(0, 24 * 365))
+            .putBoolean("ncRevokeLinks", config.ncRevokeLinks)
             .putString("ncFolder", config.ncFolder.trim().trim('/'))
             .putString("startTitle", Graphemes.take(config.startTitle, 60))
             .putString("startButton", Graphemes.take(config.startButton, 24))

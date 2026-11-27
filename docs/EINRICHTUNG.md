@@ -126,8 +126,9 @@ Die Zugangsdaten gehören **nur ins Tablet**, nicht ins Repository und nicht in 
 
 - **Fotos zeigen Personen.** Gäste vor dem Foto informieren (Hinweis am Gerät). Bei Bewohnenden und Mitarbeitenden die internen Vorgaben
   der Sonnhalde (Einwilligung/Persönlichkeitsschutz) beachten.
-- **Freigabe-Links** sind öffentlich: Wer den Link/QR-Code hat, sieht das Foto. Nextcloud: Ablaufdatum für Freigaben
-  erzwingen; SharePoint: «Jeder»-Links nur wenn gewollt.
+- **Freigabe-Links** sind öffentlich: Wer den Link/QR-Code hat, sieht das Foto. Nextcloud: Die App setzt ein Ablaufdatum
+  (Standard 12 Stunden, einstellbar; Nextcloud rechnet in ganzen Tagen, Einzelheiten in `docs/nextcloud.md`);
+  SharePoint: «Jeder»-Links nur wenn gewollt.
 - **Wohin gehen die Fotos:** Im regulären Betrieb über Power Automate in SharePoint (Microsoft 365, siehe [Microsoft: Sicherheit, Datenschutz und Compliance](https://learn.microsoft.com/de-de/microsoft-365/business-premium/m365bp-security-privacy-compliance?view=o365-worldwide)); in der Test-/Beta-Version in eine private Nextcloud.
 - **Aufbewahrung:** Fotos werden in der Regel **nach einem Monat gelöscht**, ausser jemand fragt nach. Die Löschung ist eine Vorgabe des Betriebs; die App löscht selbst nichts im Upload-Ordner, das muss im Ordner bzw. per Aufbewahrungsregel geschehen.
 - **Auf dem Tablet:** Die App sendet die Fotos hoch; nicht hochgeladene Fotos liegen in der Warteschlange und können mit

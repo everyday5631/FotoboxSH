@@ -1,7 +1,12 @@
 package ch.sonnhalde.fotobox.upload
 
+import android.util.Log
 import ch.sonnhalde.fotobox.wcm.WcmConfig
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.Credentials
 import okhttp3.FormBody
@@ -14,7 +19,10 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.IOException
+import java.time.LocalDate
+import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Laedt ein Foto per WebDAV in eine Nextcloud und erstellt einen oeffentlichen Freigabe-Link (OCS Share API).
@@ -22,6 +30,12 @@ import java.util.concurrent.TimeUnit
  *
  * Jeder Schritt meldet bei Fehlern, was genau schiefging («2/4 Anmeldung: …»), damit sich Probleme vor Ort
  * ohne Logs eingrenzen lassen.
+ *
+ * Gueltigkeit des Links: Nextcloud kennt beim Ablauf einer Freigabe nur ganze **Tage** (`expireDate` = Datum, gilt bis 23:59 Uhr),
+ * keine Stunden. Die Frist [WcmConfig.ncShareHours] wird deshalb auf ein Datum umgerechnet (siehe [expireDate]).
+ * Stundengenau wird sie mit [WcmConfig.ncRevokeLinks]: dann widerruft die App jeden Link nach Ablauf der Frist selbst und holt
+ * beim naechsten Upload Verpasstes nach (nur Links eigener Fotos `foto-<ms>.jpg` / `test-<ms>.jpg` im Upload-Ordner).
+ * Die Fotodateien selbst bleiben unberuehrt.
  */
 class NextcloudUploader(
     private val http: OkHttpClient = OkHttpClient.Builder()
@@ -32,8 +46,13 @@ class NextcloudUploader(
 ) {
     private class StepError(step: String, message: String) : Exception("$step: $message")
 
+    /** Aufraeumen laeuft im Hintergrund, damit der QR-Code nicht darauf warten muss. */
+    private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val cleanupRunning = AtomicBoolean(false)
+
     suspend fun upload(config: WcmConfig, fileName: String, jpeg: ByteArray): Result<String> =
         withContext(Dispatchers.IO) {
+            var shareId: String? = null
             runCatching {
                 val base = normalize(config.ncUrl)
                 val user = config.ncUser.trim().ifBlank { throw StepError("Eingabe", "Benutzername fehlt") }
@@ -96,22 +115,132 @@ class NextcloudUploader(
                     val sharePath = "/" + (folder + fileName).joinToString("/")
                     val shareUrl = base.newBuilder().addPathSegments("ocs/v2.php/apps/files_sharing/api/v1/shares")
                         .addQueryParameter("format", "json").build()
-                    val form = FormBody.Builder().add("path", sharePath).add("shareType", "3").add("permissions", "1").build()
-                    val share = Request.Builder().url(shareUrl).header("Authorization", auth).header("OCS-APIRequest", "true").post(form).build()
-                    http.newCall(share).execute().use { r ->
-                        val text = r.body?.string().orEmpty()
-                        val ocs = runCatching { JSONObject(text).getJSONObject("ocs") }.getOrNull()
-                        if (!r.isSuccessful) {
-                            val detail = ocs?.optJSONObject("meta")?.optString("message").orEmpty()
-                            throw StepError(s4, "HTTP ${r.code}" + (if (detail.isNotBlank()) " – $detail" else "") +
-                                " (Ist «Teilen per Link» in Nextcloud erlaubt?)")
+                    // Heute als Ablaufdatum kann der Server als «in der Vergangenheit» ablehnen: dann einmal mit morgen wiederholen.
+                    var expire = expireDate(config.ncShareHours)
+                    var retried = false
+                    var url: String? = null
+                    while (url == null) {
+                        val form = FormBody.Builder().add("path", sharePath).add("shareType", "3").add("permissions", "1")
+                            .apply { expire?.let { add("expireDate", it) } }.build()
+                        val share = Request.Builder().url(shareUrl).header("Authorization", auth).header("OCS-APIRequest", "true").post(form).build()
+                        var again = false
+                        url = http.newCall(share).execute().use { r ->
+                            val text = r.body?.string().orEmpty()
+                            val ocs = runCatching { JSONObject(text).getJSONObject("ocs") }.getOrNull()
+                            if (!r.isSuccessful) {
+                                if (!retried && expire == LocalDate.now().toString()) { again = true; return@use null }
+                                val detail = ocs?.optJSONObject("meta")?.optString("message").orEmpty()
+                                throw StepError(s4, "HTTP ${r.code}" + (if (detail.isNotBlank()) " – $detail" else "") +
+                                    " (Ist «Teilen per Link» in Nextcloud erlaubt? Ablaufdatum ${expire ?: "keines"})")
+                            }
+                            // Zur Kontrolle im Logcat: wann laeuft der Link laut Server wirklich ab?
+                            Log.i(TAG, "Nextcloud-Freigabe laeuft ab: ${ocs?.optJSONObject("data")?.optString("expiration").orEmpty().ifBlank { "nie (kein Ablaufdatum)" }}")
+                            shareId = ocs?.optJSONObject("data")?.optString("id")?.takeIf { it.isNotBlank() }
+                            ocs?.optJSONObject("data")?.optString("url")?.takeIf { it.startsWith("http") }
+                                ?: throw StepError(s4, "Antwort enthält keinen Link")
                         }
-                        ocs?.optJSONObject("data")?.optString("url")?.takeIf { it.startsWith("http") }
-                            ?: throw StepError(s4, "Antwort enthält keinen Link")
+                        if (again) { retried = true; expire = LocalDate.now().plusDays(1).toString() }
                     }
+                    url
                 }
+            }.onSuccess {
+                scheduleRevoke(config, shareId)
+                cleanupAsync(config)
             }
         }
+
+    /**
+     * Ablaufdatum («YYYY-MM-DD») fuer die Freigabe oder `null` (= ohne Ablauf, [hours] <= 0).
+     *
+     * Nextcloud rechnet nur in ganzen Tagen und laesst den Link **bis 23:59 Uhr dieses Tages** gelten (am Tablet bestaetigt:
+     * «Share Expiration: … at 11:59 PM»). Genommen wird das Datum von «jetzt + Frist». Ist das heute, kann der Server das
+     * ablehnen; dann wird einmal mit morgen wiederholt (siehe `upload`). Kurze Fristen (unter einem Tag) setzt deshalb erst
+     * [scheduleRevoke] stundengenau durch; das Datum in Nextcloud ist nur das Netz darunter.
+     */
+    internal fun expireDate(hours: Int, now: LocalDateTime = LocalDateTime.now()): String? {
+        if (hours <= 0) return null
+        return now.plusHours(hours.toLong()).toLocalDate().toString()
+    }
+
+    /**
+     * Widerruft den Link dieses einen Fotos nach Ablauf der Frist (laeuft im Hintergrund, solange die App laeuft).
+     * Wird die App vorher beendet, holt [revokeExpiredLinks] beim naechsten Upload alles Verpasste nach.
+     */
+    private fun scheduleRevoke(config: WcmConfig, shareId: String?) {
+        if (!config.ncRevokeLinks || config.ncShareHours <= 0 || shareId == null) return
+        cleanupScope.launch {
+            delay(config.ncShareHours * 3_600_000L)
+            runCatching {
+                val base = normalize(config.ncUrl)
+                val auth = Credentials.basic(config.ncUser.trim(), config.ncPassword)
+                val req = base.newBuilder().addPathSegments("ocs/v2.php/apps/files_sharing/api/v1/shares").addPathSegment(shareId)
+                    .addQueryParameter("format", "json").build()
+                http.newCall(Request.Builder().url(req).header("Authorization", auth).header("OCS-APIRequest", "true").delete().build())
+                    .execute().use { r -> Log.i(TAG, "Nextcloud: Link $shareId nach ${config.ncShareHours} h widerrufen (HTTP ${r.code})") }
+            }.onFailure { Log.w(TAG, "Nextcloud: Link widerrufen fehlgeschlagen: ${it.message}") }
+        }
+    }
+
+    private fun cleanupAsync(config: WcmConfig) {
+        if (!config.ncRevokeLinks || config.ncShareHours <= 0) return
+        if (!cleanupRunning.compareAndSet(false, true)) return
+        cleanupScope.launch {
+            try {
+                runCatching { revokeExpiredLinks(config) }.onFailure { Log.w(TAG, "Nextcloud: Links widerrufen fehlgeschlagen: ${it.message}") }
+            } finally {
+                cleanupRunning.set(false)
+            }
+        }
+    }
+
+    /**
+     * Widerruft die oeffentlichen Links eigener Fotos im Upload-Ordner, die aelter als die Frist sind. Das Foto selbst bleibt
+     * in Nextcloud liegen; nur der Link (Freigabe) wird geloescht, danach ergibt der QR-Code «nicht gefunden».
+     * Betroffen sind nur Freigaben vom Typ «Link» (shareType 3) auf Dateien, die die App selbst so benennt
+     * (`foto-<ms>.jpg`, `test-<ms>.jpg`), direkt im konfigurierten Ordner und nie im Hauptverzeichnis.
+     * Das Alter kommt vom Server (`stime` der Freigabe), nicht von der Tablet-Uhr der Aufnahme.
+     */
+    private fun revokeExpiredLinks(config: WcmConfig) {
+        val base = normalize(config.ncUrl)
+        val user = config.ncUser.trim()
+        val folder = config.ncFolder.trim().trim('/').split('/').filter { it.isNotBlank() }
+        if (user.isBlank() || config.ncPassword.isBlank() || folder.isEmpty()) return
+        val auth = Credentials.basic(user, config.ncPassword)
+
+        fun shares() = base.newBuilder().addPathSegments("ocs/v2.php/apps/files_sharing/api/v1/shares")
+
+        // Alle Freigaben der Dateien direkt im Ordner.
+        val listUrl = shares().addQueryParameter("format", "json")
+            .addQueryParameter("path", "/" + folder.joinToString("/")).addQueryParameter("subfiles", "true").build()
+        val json = http.newCall(Request.Builder().url(listUrl).header("Authorization", auth).header("OCS-APIRequest", "true").get().build())
+            .execute().use { r -> if (r.isSuccessful) r.body?.string().orEmpty() else return }
+        val data = JSONObject(json).getJSONObject("ocs").optJSONArray("data") ?: return
+
+        val limitSec = config.ncShareHours * 3_600L
+        val nowSec = System.currentTimeMillis() / 1000
+        var revoked = 0
+        for (i in 0 until data.length()) {
+            val share = data.optJSONObject(i) ?: continue
+            if (share.optInt("share_type") != 3) continue
+            val fileName = share.optString("path").substringAfterLast('/')
+            if (!OWN_FILE.matches(fileName)) continue
+            val id = share.optString("id").takeIf { it.isNotBlank() } ?: continue
+            val createdSec = share.optLong("stime", 0L).takeIf { it > 0 } ?: continue
+            if (nowSec - createdSec <= limitSec) continue
+            val del = Request.Builder().url(shares().addPathSegment(id).addQueryParameter("format", "json").build())
+                .header("Authorization", auth).header("OCS-APIRequest", "true").delete().build()
+            http.newCall(del).execute().use { r -> if (r.isSuccessful || r.code == 404) revoked++ }
+            if (revoked >= MAX_REVOKES_PER_RUN) break
+        }
+        Log.i(TAG, "Nextcloud: ${data.length()} Freigaben im Ordner, $revoked abgelaufene Links widerrufen")
+    }
+
+    private companion object {
+        const val TAG = "Fotobox"
+        const val MAX_REVOKES_PER_RUN = 50
+        /** Dateien, die diese App selbst anlegt (Name enthaelt die Aufnahmezeit in Millisekunden). */
+        val OWN_FILE = Regex("(?:foto|test)-\\d{10,13}\\.jpg")
+    }
 
     private fun checkAuth(step: String, code: Int) {
         if (code == 401) throw StepError(step, "Anmeldung abgelehnt (HTTP 401) – Benutzername (Konto-ID, nicht Anzeigename) und Passwort prüfen. Bei aktivierter Zwei-Faktor-Anmeldung ist ein App-Passwort nötig (Nextcloud → Einstellungen → Sicherheit → Neues App-Passwort)")
