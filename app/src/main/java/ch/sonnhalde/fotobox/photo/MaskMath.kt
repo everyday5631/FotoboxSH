@@ -60,7 +60,7 @@ internal object MaskMath {
         val col = DoubleArray(w)
         for (y in 0..minOf(r, h - 1)) {
             val row = y * w
-            for (x in 0 until w) col[x] += tmp[row + x]
+            for (x in 0 until w) col[x] = col[x] + tmp[row + x].toDouble()
         }
         for (y in 0 until h) {
             val lo = maxOf(y - r, 0)
@@ -70,11 +70,11 @@ internal object MaskMath {
             for (x in 0 until w) out[row + x] = (col[x] / n).toFloat()
             if (y + r + 1 < h) {
                 val add = (y + r + 1) * w
-                for (x in 0 until w) col[x] += tmp[add + x]
+                for (x in 0 until w) col[x] = col[x] + tmp[add + x].toDouble()
             }
             if (y - r >= 0) {
                 val sub = (y - r) * w
-                for (x in 0 until w) col[x] -= tmp[sub + x]
+                for (x in 0 until w) col[x] = col[x] - tmp[sub + x].toDouble()
             }
         }
         return out
