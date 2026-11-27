@@ -39,6 +39,15 @@ Bei einem Fehler steht, welcher Schritt scheiterte:
 
 - Das App-Passwort liegt im App-Speicher des Tablets. Verwende deshalb den eigenen Benutzer und widerrufe das
   App-Passwort in Nextcloud, falls das Tablet verloren geht.
-- Die Freigabe-Links sind öffentlich (jeder mit Link kann das Foto sehen). Ordner regelmässig aufräumen; in Nextcloud
-  lässt sich ein Ablaufdatum für Freigaben erzwingen (*Freigabe → Standardablauf*).
+- Die Freigabe-Links sind öffentlich (jeder mit Link kann das Foto sehen). Die App legt jeden Link deshalb **mit Ablaufdatum**
+  an: Standard **12 Stunden**, einstellbar im Setup unter *Konfiguration → Upload-Ziel → Nextcloud → Download-Link gültig für*
+  (1 Std. bis 7 Tage oder ohne Ablauf).
+  - **Grenze von Nextcloud:** Ein Ablaufdatum gilt nur in ganzen **Tagen**. Die App rundet so auf, dass der Link nie früher
+    abläuft als eingestellt; er kann dadurch bis zu etwa einen Tag länger gelten. Das tatsächliche Ablaufdatum steht im
+    Logcat (Tag `Fotobox`, «Nextcloud-Freigabe laeuft ab»); mit einem echten Server **noch nicht geprüft**.
+  - **Stundengenau:** Schalter *Fotos nach Ablauf in Nextcloud löschen* (standardmässig aus). Die App löscht dann nach jedem
+    erfolgreichen Upload im Hintergrund ihre eigenen Fotos (`foto-<ms>.jpg`, `test-<ms>.jpg`) im Upload-Ordner, die älter als die
+    Frist sind (höchstens 50 pro Durchgang, nur direkt im Ordner, nie im Hauptverzeichnis). Nextcloud legt sie zuerst in den
+    Papierkorb des Benutzers. Voraussetzung: Die Uhr des Tablets stimmt, und das Tablet lädt noch Fotos hoch (ohne Upload kein Aufräumen).
+  - Der Server kann zusätzlich ein Standard- oder Höchst-Ablaufdatum erzwingen (*Freigabe → Standardablauf*); das gilt weiterhin.
 - Fotos enthalten Personen: Aufbewahrungsdauer festlegen und am Gerät auf den Datenschutz hinweisen.

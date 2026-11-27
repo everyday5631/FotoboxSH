@@ -245,6 +245,19 @@ private fun UploadSection(state: UiState, actions: Actions) {
             SonnField("Benutzername", cfg.ncUser, KeyboardType.Text) { actions.onConfigQuiet(cfg.copy(ncUser = it)) }
             SonnField("App-Passwort", cfg.ncPassword, KeyboardType.Password) { actions.onConfigQuiet(cfg.copy(ncPassword = it)) }
             SonnField("Ordner (wird angelegt)", cfg.ncFolder, KeyboardType.Text) { actions.onConfigQuiet(cfg.copy(ncFolder = it)) }
+            ChoiceRow(
+                "Download-Link gültig für",
+                listOf("1 Std." to 1, "6 Std." to 6, "12 Std." to 12, "24 Std." to 24, "2 Tage" to 48, "7 Tage" to 168, "ohne Ablauf" to 0),
+                cfg.ncShareHours,
+            ) { actions.onConfigQuiet(cfg.copy(ncShareHours = it)) }
+            SettingSwitch("Fotos nach Ablauf in Nextcloud löschen (Frist stundengenau)", cfg.ncDeleteExpired) {
+                actions.onConfigQuiet(cfg.copy(ncDeleteExpired = it))
+            }
+            Text(
+                "Nextcloud rechnet beim Link-Ablauf nur in ganzen Tagen: ohne das Löschen kann der Link bis zu etwa einen Tag länger gelten. " +
+                    "Gelöscht werden nur Fotos dieser App (foto-…/test-…) direkt im oben genannten Ordner; sie landen zuerst im Papierkorb von Nextcloud.",
+                color = Sonn.Stone, fontSize = 12.sp,
+            )
         } else {
             SonnField("Upload-Link (Power-Automate-Flow)", cfg.flowUrl, KeyboardType.Uri) { actions.onConfigQuiet(cfg.copy(flowUrl = it)) }
         }
