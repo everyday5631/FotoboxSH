@@ -77,4 +77,6 @@ dependencies {
     implementation("com.google.zxing:core:3.5.3")
     // Hintergrund hinter Personen ersetzen: Modell steckt in der App, laeuft ohne Internet auf dem Tablet.
     implementation("com.google.mlkit:segmentation-selfie:16.0.0-beta6")
+    // Haar-Erkennung (Modell hair_segmenter.tflite in assets/models/), direkt mit TensorFlow Lite.
+    implementation("org.tensorflow:tensorflow-lite:2.17.0")
 }

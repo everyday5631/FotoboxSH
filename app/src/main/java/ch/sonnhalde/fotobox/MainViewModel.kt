@@ -252,7 +252,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             backgroundNote = "Hintergrund konnte nicht geladen werden, es gilt das Originalfoto."
             return photo
         }
-        return runCatching { BackgroundRemover.replace(photo, background) }.fold(
+        return runCatching { BackgroundRemover.replace(getApplication<Application>(), photo, background) }.fold(
             onSuccess = { r ->
                 Log.i(TAG, "Hintergrund ersetzt, Personenanteil %.3f".format(r.personShare))
                 // Fast nichts oder fast alles als Person erkannt: fuer die Fehlersuche sichtbar machen.
