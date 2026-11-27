@@ -2,7 +2,8 @@
 
 Android-App (Kotlin, Jetpack Compose) als Ersatz für die UpReach-Fotobox: Foto mit Timer, Banner, QR-Code zum Download,
 Druck auf DNP QW410 über WCMPlus, Kiosk-Modus. Auftraggeber: Pflege- und Betreuungszentrum Sonnhalde AG.
-Details, Gerätefakten und Entscheidungen: **`docs/ENTWICKLUNG.md`** (zuerst lesen). Bedienung: `README.md`.
+Details, Gerätefakten und Entscheidungen: **`docs/ENTWICKLUNG.md`** (zuerst lesen). Stand und Erkenntnisse der letzten grossen Sitzung (Freistellung, Messwerte,
+Traktanden, Testprotokoll): **`docs/ERKENNTNISSE-2026-11-27.md`**. Bedienung: `README.md`.
 
 ## Arbeitsweise (wichtig)
 

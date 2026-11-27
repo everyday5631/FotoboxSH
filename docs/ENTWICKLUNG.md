@@ -6,6 +6,9 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
 > Alles danach (z. B. das anpassbare Banner mit Text links/rechts, Farben, eigenem Logo, Transparenz und Banner auf der digitalen
 > Version, Foto-Hintergrund mit Personen-Freistellung, neues App-Icon) ist nur gebaut, aber noch **nicht auf dem Tablet getestet**. Bei Fehlern ist `v0.1.36` der Rückfallstand.
 
+> **Weiterführend:** `docs/ERKENNTNISSE-2026-11-27.md` hält die Erkenntnisse der Sitzung vom 27.11.2026 fest (Freistellung mit Messwerten und Modellen, Rechenzeit und Speicher,
+> Entscheidungen der Nutzerperson, vollständige Traktandenliste, Testprotokoll). Prüfskripte dazu: `tools/maskcheck/`.
+
 ## Ablauf der App
 
 1. **Splash** → **Setup-Modus** (Reiter Konfiguration, Kamera, Drucker, Warteschlange, WLAN; Start-Knopf unten; ⏻ beendet die App nach PIN).
@@ -90,3 +93,7 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
    `sonnhalde_logo_zusatz_neg` (weisses Logo im dunklen Kopfbalken der App), Icon und Farben. Gewünscht: eigenes Logo je Verwendung, weil dieselbe Datei nicht überall passt
    (Logo für hellen Grund: Startbildschirm und Foto-Banner; Logo für Dunkelblau: Kopfbalken der App), dazu ein eigener Reiter «Benutzerdefinitionen» im Setup, der
    Logos, Texte und ggf. Farben bündelt. Das Logo im Foto-Banner ist bereits einstellbar (Banner-Einstellungen).
+10. Neu am 27.11.2026 (Einzelheiten und Begründungen in `docs/ERKENNTNISSE-2026-11-27.md`, Abschnitt 9): Rückmeldung für Gäste auf dem Tablet testen; Rechenzeit und Speicher genauer prüfen
+    (Stresstest, `dumpsys meminfo`, Thermal); Knopf «Modell neu laden» im Entwicklermodus; **Druck als Pflicht** (Druckaufträge auf dem Speicher ablegen, erneut versuchen, Meldung ans Personal);
+    Upload-Warteschlange automatisch senden; **Töne** (Countdown, Auslösen, fertig); Banner-Transparenz und Druck prüfen; Lizenz der Haarmodell-Datei und App-Grösse; PR #12 und #14 mergen.
+    **Druck und Kiosk-Beenden zuletzt testen** (Fotopapier knapp, jeder Systemstart des DNP druckt eine Status-Seite).
