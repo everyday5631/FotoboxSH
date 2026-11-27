@@ -99,3 +99,5 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
     **Druck und Kiosk-Beenden zuletzt testen** (Fotopapier knapp, jeder Systemstart des DNP druckt eine Status-Seite).
     Dazu (Abschnitte 7.4 bis 7.7): **Foto-Verlauf** der letzten ~6 Fotos im Entwicklermodus mit erneutem Drucken/Hochladen (heute ist das Foto nach dem 90-s-Zeitlimit weg und es gibt keinen erneuten Druck),
     Zeitlimit während des Druckens pausieren, Druckfehler nach dem Verlassen sichtbar machen, Dauertest/Messung, Löschregel der Upload-Warteschlange.
+    Außerdem: **Drucker-Wartungsmodus** («Drucker pausieren / freigeben»: Aufträge werden gespeichert, Drucker kann abgekoppelt, ausgeschaltet oder gewartet werden, danach werden die Aufträge der Reihe nach gedruckt)
+    und ein **Lösch-Knopf** (zusätzlich zum Export) für Foto-Verlauf und Warteschlange; Einzelheiten in `docs/ERKENNTNISSE-2026-11-27.md`, Abschnitt 9.1.

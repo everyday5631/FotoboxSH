@@ -284,10 +284,42 @@ ist **nicht gemessen** (frühere APKs wurden nicht aufgehoben). Das Release **`d
 | 14 | **Zugangsdaten sicher ablegen** (Nextcloud-App-Passwort, später Power-Automate-Flow-URL): vor dem Einsatz bei der Sonnhalde zu klären. | offen (alte Liste Punkt 4) |
 | 15 | Netz-Diagnose im Setup, Konfiguration exportieren/importieren, Fische-Bild als Standard-Hintergrund, Version 1.0 und README für Dritte. | zurückgestellt (alte Liste 2, 3, 5, 7) |
 
-| 16 | **Foto-Verlauf im Entwicklermodus:** die letzten ~6 Fotos (Druck- und digitale Version) auf dem internen Speicher, mit Vorschau, «Erneut drucken», «Erneut hochladen», «Löschen/Exportieren»; Löschregel (älteste verdrängen, nach Erfolg und spätestens nach ~24 h). Anlass: Foto ist nach dem Zeitlimit weg (Abschnitt 7.4). | offen |
+| 16 | **Foto-Verlauf im Entwicklermodus** («letzte ~6 Fotos»): mit Vorschau, erneut drucken, erneut hochladen, **exportieren** und **löschen** (einzeln und alle, mit PIN); Ring-Puffer und Löschregel. Anlass: Foto ist nach dem Zeitlimit weg (7.4). Ausführung in 9.1. | offen |
 | 17 | **Zeitlimit des Ergebnisses pausieren, solange gedruckt wird**; **Druckfehler nach dem Verlassen sichtbar machen** (heute wird er still verworfen), z. B. Hinweis für das Personal im Entwicklermodus. | offen |
-| 18 | **Dauertest/Messung im Entwicklermodus** (Abschnitt 7.6). | offen |
-| 19 | **Löschregel und Speicherort der Upload-Warteschlange** entscheiden (Abschnitt 7.5); Empfehlung: intern lassen, Ansicht mit Export im Entwicklermodus. | offen |
+| 18 | **Dauertest/Messung im Entwicklermodus** (Abschnitt 7.6). Die Nutzerperson will zuerst die übrigen Traktanden klären, danach die Messung per ADB und in der App. | offen, später |
+| 19 | **Löschregel und Speicherort der Upload-Warteschlange** entscheiden (Abschnitt 7.5); Empfehlung: intern lassen, Ansicht mit Export **und Lösch-Knopf** im Entwicklermodus (Nutzerperson: Export allein genügt nicht, es braucht auch das Löschen). | offen |
+| 20 | **Drucker-Wartungsmodus («Drucker pausieren / freigeben»):** Knopf im Entwicklermodus, damit der Drucker sicher abgekoppelt, ausgeschaltet oder gewartet werden kann (neue Papierrolle, hängende Aufträge); Aufträge bleiben gespeichert und werden nach dem Freigeben der Reihe nach gedruckt. Ausführung in 9.1. Baut auf Traktandum 6 auf. | offen |
+
+### 9.1 Ausführung der neuen Traktanden 16, 17 und 20 (Entwurf, **nichts davon ist umgesetzt**)
+
+**Traktandum 16, 17: Foto-Verlauf und Zeitlimit** (Wunsch der Nutzerperson, in Claudes Worten)
+- *Warum:* Nach den 90 Sekunden springt die App zum Start, die Druck-Version ist dann weg. Das kann auch selten auftreten und ist trotzdem schlimm, zum Beispiel wenn dem Drucker die Papierrolle ausgeht
+  oder der WLAN-Wechsel hängt. Das Personal muss ein Foto später noch drucken können.
+- *Was:* Beim Fertigstellen jedes Fotos werden Druck- und digitale Version auf dem **internen Speicher** abgelegt (z. B. `files/history/<Zeitstempel>/` mit `print.jpg`, `digital.jpg`, `status.json` für Kopien, Druck- und Upload-Status,
+  Uhrzeit). Ring-Puffer der letzten **N = 6** Fotos (Einstellung); ältere werden automatisch verdrängt.
+- *Wo:* Reiter «Fotos» im Setup (Entwicklermodus, hinter der PIN). Liste mit Vorschaubild, Uhrzeit, Zeichen für «gedruckt» und «hochgeladen» (Erfolg/Fehler/offen).
+- *Aktionen je Foto:* Vorschau gross, **Erneut drucken** (Anzahl Abzüge wählbar), **Erneut hochladen** (neuer QR-Code), **Exportieren** (Teilen/Speichern), **Löschen**. Oben **Alle löschen** (mit PIN-Abfrage und Bestätigung).
+  Die Nutzerperson will das Löschen ausdrücklich zusätzlich zum Export.
+- *Löschregel:* Standard: nur die letzten N, dazu automatisch nach **spätestens ~24 Stunden** (Wert einstellbar), weil es Gästefotos in einem Pflegezentrum sind; Entscheid über die Frist und ob Fotos nach erfolgreichem Druck und Upload früher
+  gelöscht werden, trifft die Nutzerperson mit der Sonnhalde.
+- *Zeitlimit (Traktandum 17):* Das 90-Sekunden-Limit des Ergebnisses pausiert, solange der Status «Drucken» läuft. Schlägt ein Druck fehl, nachdem der Gast gegangen ist, zeigt der Entwicklermodus (und optional ein kleiner Hinweis auf dem Startbildschirm für das Personal)
+  «Druck fehlgeschlagen», und das Foto steht im Verlauf zum erneuten Drucken.
+- *Speicherbedarf:* 6 Fotos mit je zwei JPEGs (~1–2 MB) = rund 10–25 MB auf dem Gerät, im Arbeitsspeicher nichts Zusätzliches (Vorschaubilder klein).
+- *Abhängigkeit:* Der Verlauf liefert die Grundlage für Traktandum 6 (Druckaufträge dürfen nicht verloren gehen) und 20.
+
+**Traktandum 20: Drucker-Wartungsmodus** (Vorschlag der Nutzerperson, in Claudes Worten)
+- *Warum:* Wenn Aufträge hängen, der Drucker eine neue Papierrolle braucht oder neu gestartet werden muss, soll das Personal den Drucker **sicher abkoppeln** können, ohne dass Fotos verloren gehen, und danach alles in einem Zug nachdrucken.
+- *Ablauf:*
+  1. Knopf **«Drucker pausieren»**: Die App sendet nichts mehr an den Drucker. Ein laufender Auftrag wird abgewartet (mit Zeitgrenze) oder abgebrochen. Neue Druckwünsche von Gästen landen in einer **dauerhaften Druckwarteschlange**
+     (Foto, Anzahl Abzüge, Zeit). Die App meldet «Sie können den Drucker jetzt ausschalten oder trennen» erst, wenn nichts mehr in Arbeit ist.
+  2. Gästen zeigt der Ergebnis-Bildschirm statt «DRUCKEN» einen Hinweis, dass das Foto später gedruckt wird (Wortlaut zu klären; Alternative: Druckknopf ausblenden).
+  3. Knopf **«Drucker freigeben»**: Die App verbindet neu (inklusive WLAN-Wechsel), liest den Druckerstatus (IPP `printer-state`, `printer-state-reasons`, z. B. Papier leer) und sendet die wartenden Aufträge **der Reihe nach**.
+     Fortschritt «3 von 5», Fehlgeschlagenes bleibt in der Warteschlange.
+- *Grenzen (ehrlich):* Die App kann den Drucker **nicht selbst ausschalten** und nicht neu starten. Aufträge, die der WCMPlus oder der DNP schon angenommen hat, kann die App nur abbrechen, wenn WCMPlus die IPP-Befehle für das Abbrechen von Aufträgen
+  unterstützt (**nicht geprüft**). Gefahr von **Doppeldrucken**: Hat der Drucker einen Auftrag angenommen, die App aber einen Fehler gesehen, würde das Freigeben ihn nochmals senden; Aufträge brauchen eine eigene Kennung und die App sollte `Get-Jobs` prüfen
+  (**nicht erprobt**). **Beim Start des DNP-Systems druckt der Drucker eine Status-Seite**, also kostet ein Neustart einen Abzug.
+- *Voraussetzung:* Traktandum 6 (dauerhafte Druckaufträge mit Wiederholung) und Traktandum 16 (Fotos bleiben erhalten).
+- *Tests:* Papierrolle bei den Tests knapp; Test nach den anderen Punkten und möglichst mit wenigen Abzügen.
 
 **Sicherheitshinweis:** Das Repository ist laut Beschreibung von PR #13 **öffentlich**. In der Dokumentation steht das **Werkspasswort des WCMPlus-Hotspots**; laut `CLAUDE.md` gehören keine WLAN-Passwörter ins Repository.
 Ob es entfernt wird (und die Historie bereinigt), ist offen. Keine neuen Zugangsdaten eintragen.
