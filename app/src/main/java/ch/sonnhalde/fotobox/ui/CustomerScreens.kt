@@ -37,6 +37,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ch.sonnhalde.fotobox.AppVersion
+import ch.sonnhalde.fotobox.MAX_COPIES
 import ch.sonnhalde.fotobox.PrintState
 import ch.sonnhalde.fotobox.UiState
 import ch.sonnhalde.fotobox.UploadState
@@ -125,12 +126,22 @@ fun ResultScreen(state: UiState, actions: Actions, onAdmin: () -> Unit) {
             state.photo?.let {
                 Image(it.asImageBitmap(), contentDescription = "Druck-Version", modifier = imageModifier(fit))
             }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                SonnButton("−", primary = false, onClick = { actions.onCopies(state.copies - 1) })
-                Text("${state.copies} ${if (state.copies == 1) "Abzug" else "Abzüge"}", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                SonnButton("+", primary = false, onClick = { actions.onCopies(state.copies + 1) })
+            // Pro Foto sind insgesamt hoechstens MAX_COPIES Abzuege moeglich; waehrend des Druckens und danach ist der Knopf grau.
+            val remaining = MAX_COPIES - state.printedCopies
+            val busy = state.print is PrintState.Printing
+            if (remaining > 0) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    SonnButton("−", primary = false, enabled = !busy && state.copies > 1, onClick = { actions.onCopies(state.copies - 1) })
+                    Text("${state.copies} ${if (state.copies == 1) "Abzug" else "Abzüge"}", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    SonnButton("+", primary = false, enabled = !busy && state.copies < remaining, onClick = { actions.onCopies(state.copies + 1) })
+                }
             }
-            SonnButton("DRUCKEN", primary = true, onClick = actions.onPrint)
+            SonnButton("DRUCKEN", primary = true, enabled = !busy && remaining > 0, onClick = actions.onPrint)
+            if (remaining <= 0) {
+                Text("Es sind höchstens $MAX_COPIES Abzüge pro Foto möglich.", color = Sonn.Stone, fontSize = 14.sp)
+            } else if (state.printedCopies > 0) {
+                Text("Noch $remaining ${if (remaining == 1) "Abzug" else "Abzüge"} möglich.", color = Sonn.Stone, fontSize = 14.sp)
+            }
             when (val pr = state.print) {
                 PrintState.Idle -> Unit
                 is PrintState.Printing -> Text(pr.stage, color = Sonn.Stone, fontSize = 16.sp)

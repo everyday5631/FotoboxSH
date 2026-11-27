@@ -279,20 +279,25 @@ internal fun Notice(text: String) {
 internal val MaterialShape = androidx.compose.foundation.shape.RoundedCornerShape(3.dp)
 
 @Composable
-internal fun SonnButton(label: String, primary: Boolean, onDark: Boolean = false, onClick: () -> Unit) {
+internal fun SonnButton(label: String, primary: Boolean, onDark: Boolean = false, enabled: Boolean = true, onClick: () -> Unit) {
     if (primary) {
         Button(
             onClick = onClick,
+            enabled = enabled,
             shape = MaterialShape,
-            colors = ButtonDefaults.buttonColors(containerColor = Sonn.HeadingGold, contentColor = Sonn.Navy),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Sonn.HeadingGold, contentColor = Sonn.Navy,
+                disabledContainerColor = Sonn.Line, disabledContentColor = Sonn.Stone,
+            ),
         ) { Text(label, fontWeight = FontWeight.Bold) }
     } else {
         val tone = if (onDark) Sonn.Cream else Sonn.Navy
         OutlinedButton(
             onClick = onClick,
+            enabled = enabled,
             shape = MaterialShape,
-            border = BorderStroke(1.5.dp, tone),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = tone),
+            border = BorderStroke(1.5.dp, if (enabled) tone else Sonn.Line),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = tone, disabledContentColor = Sonn.Stone),
         ) { Text(label, fontWeight = FontWeight.Bold) }
     }
 }

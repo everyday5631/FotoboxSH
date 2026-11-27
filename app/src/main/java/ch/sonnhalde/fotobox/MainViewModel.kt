@@ -96,6 +96,8 @@ data class UiState(
     val processing: String? = null,
     /** Foto im Verlauf, das gerade auf dem Ergebnis-Bildschirm steht (null = keins); Druck und Upload melden sich damit zurueck. */
     val historyId: String? = null,
+    /** Abzuege, die fuer das angezeigte Foto schon gedruckt wurden; pro Foto sind insgesamt hoechstens [MAX_COPIES] moeglich. */
+    val printedCopies: Int = 0,
     /** Foto-Verlauf (neueste zuerst) fuer den Reiter «Fotos» im Setup. */
     val history: List<HistoryEntry> = emptyList(),
 )
@@ -186,7 +188,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun exitRetail() {
         digitalJpeg = null
-        _state.update { it.copy(retail = false, screen = Screen.Overview, historyId = null, photo = null, digital = null, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, message = null) }
+        _state.update { it.copy(retail = false, screen = Screen.Overview, historyId = null, printedCopies = 0, photo = null, digital = null, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, message = null) }
     }
 
     // ---- Startbildschirm-Hintergrund (Bild aus der Galerie) ----
@@ -311,14 +313,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun checkPin(pin: String) = pin == Kiosk.pin(getApplication())
 
-    fun setCopies(n: Int) = _state.update { it.copy(copies = n.coerceIn(1, MAX_COPIES)) }
+    fun setCopies(n: Int) = _state.update { it.copy(copies = n.coerceIn(1, maxOf(1, MAX_COPIES - it.printedCopies))) }
 
     fun backToHome() {
         // Upload fehlgeschlagen und Kunde geht weiter: Foto in die Warteschlange, nichts geht verloren.
         digitalJpeg?.let { if (_state.value.upload is UploadState.Failed) { queue.add(it); refreshQueue() } }
         digitalJpeg = null
         _state.update {
-            it.copy(screen = Screen.Welcome, processing = null, historyId = null, guestBackgroundId = null, backgroundNote = null, photo = null, digital = null, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, savedUri = null, message = null)
+            it.copy(screen = Screen.Welcome, processing = null, historyId = null, printedCopies = 0, guestBackgroundId = null, backgroundNote = null, photo = null, digital = null, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, savedUri = null, message = null)
         }
     }
 
@@ -359,7 +361,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 onSuccess = { p ->
                     digitalJpeg = p.digitalJpeg
                     _state.update {
-                        it.copy(screen = Screen.Result, processing = null, historyId = p.entry.id, backgroundNote = backgroundNote, photo = p.print, digital = p.digital, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, savedUri = null, message = null)
+                        it.copy(screen = Screen.Result, processing = null, historyId = p.entry.id, printedCopies = 0, backgroundNote = backgroundNote, photo = p.print, digital = p.digital, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, savedUri = null, message = null)
                     }
                     refreshHistory()
                     val upload = startUpload()
@@ -432,9 +434,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     /** «DRUCKEN» auf dem Ergebnis-Bildschirm (und Auto-Druck): das aktuelle Foto mit der gewaehlten Zahl Abzuege. */
     fun printPhoto() {
-        val id = _state.value.historyId ?: return
-        if (_state.value.print is PrintState.Printing) return // Doppeltippen startet keinen zweiten Auftrag
-        enqueuePrint(id, _state.value.copies)
+        val s = _state.value
+        val id = s.historyId ?: return
+        if (s.print is PrintState.Printing) return // Doppeltippen startet keinen zweiten Auftrag
+        val remaining = MAX_COPIES - s.printedCopies
+        if (remaining <= 0) return // alle erlaubten Abzuege dieses Fotos sind gedruckt
+        // Sofort (noch vor dem Speichern) auf «laeuft» stellen, damit auch sehr schnelle Taps nichts Zweites starten.
+        _state.update { it.copy(print = PrintState.Printing("Druckauftrag wartet …")) }
+        enqueuePrint(id, minOf(s.copies, remaining))
     }
 
     /** Erneut drucken aus dem Foto-Verlauf (Setup). */
@@ -465,11 +472,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val config = _state.value.config
         fun ui(change: (UiState) -> UiState) { if (_state.value.historyId == id) _state.update(change) }
         fun stage(text: String) = ui { it.copy(print = PrintState.Printing(text)) }
-        suspend fun finish(ok: Boolean, detail: String) {
+        suspend fun finish(ok: Boolean, detail: String, sent: Int = 0) {
             withContext(Dispatchers.IO) {
                 history.update(id) { it.copy(printStatus = if (ok) "done" else "failed", printDetail = detail, printedAt = System.currentTimeMillis()) }
             }
-            ui { it.copy(print = if (ok) PrintState.Done(detail) else PrintState.Failed(detail)) }
+            ui {
+                val printed = it.printedCopies + sent
+                it.copy(
+                    print = if (ok) PrintState.Done(detail) else PrintState.Failed(detail),
+                    printedCopies = printed,
+                    copies = it.copies.coerceIn(1, maxOf(1, MAX_COPIES - printed)),
+                )
+            }
             refreshHistory()
         }
 
@@ -489,6 +503,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val attempts = 1 + PRINT_RETRIES
         var result: Result<String> = Result.failure(IllegalStateException("kein Versuch"))
         var attempt = 0
+        var sent = 0
         while (attempt < attempts) {
             attempt++
             val n = if (attempt == 1) copies else 1
@@ -498,12 +513,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             }
             result = if (useWifi) printViaPrinterWifi(config, img, n, ::stage)
             else printer.printJpeg(config, img.bytes, img.width, img.height, n)
-            if (result.isSuccess) break
+            if (result.isSuccess) { sent = n; break }
             Log.w(TAG, "Druck Versuch $attempt von $attempts fehlgeschlagen: ${result.exceptionOrNull()?.message}")
         }
         result.fold(
             onSuccess = { text ->
-                finish(true, if (attempt == 1) text else "$text (nach Versuch $attempt, nur 1 Abzug; gewünscht waren $copies)")
+                finish(true, if (attempt == 1) text else "$text (nach Versuch $attempt, nur 1 Abzug; gewünscht waren $copies)", sent)
             },
             onFailure = { e ->
                 finish(false, "${e.message ?: "Drucken fehlgeschlagen"} (nach $attempts Versuchen)")

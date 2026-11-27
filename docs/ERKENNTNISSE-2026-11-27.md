@@ -290,6 +290,8 @@ ist **nicht gemessen** (frühere APKs wurden nicht aufgehoben). Das Release **`d
 18. **Zeitlimit des Ergebnisses:** 90 Sekunden als Standard, im Entwicklermodus einstellbar.
 19. **Druck-Wiederholung:** nur **zwei** Wiederholungen, und dabei **nur je 1 Abzug** (wählte der Gast 3 Abzüge und es klappt nicht, gibt es nicht 6, sondern höchstens 1 + 1 weitere). Papier ist knapp.
     Auslegung von Claude: erster Versuch mit der gewählten Menge, danach höchstens 2 Wiederholungen mit je 1 Abzug. Risiko (nicht geprüft): Hat der Drucker einen Auftrag angenommen und die App sah trotzdem einen Fehler (Zeitüberschreitung), kommt ein Abzug doppelt.
+21. **Abzüge pro Foto begrenzt (Fund beim ersten Tablet-Test):** Zuerst konnte ein Gast «Drucken» beliebig oft tippen (3 Abzüge gewählt, dreimal getippt = 9 Abzüge). Jetzt sind pro Foto insgesamt höchstens 3 Abzüge möglich (Zähler `printedCopies`, nur erfolgreiche Aufträge zählen);
+    der Knopf ist während des Druckens und danach grau, der Auftrag wird schon beim Tippen als «läuft» markiert. Das Personal kann über den Reiter «Fotos» weiter nachdrucken (dort gilt die Grenze nicht).
 20. **Pausierter Drucker (Block B):** Der Druckknopf wird **grau** und es steht ein **Hinweis**, dass der Drucker pausiert ist und das Personal gerufen werden soll (das ersetzt Punkt 15; das Personal steht vor Ort daneben). Noch nicht gebaut.
 
 ## 9. Offene Traktanden (vollständig, mit Status)
