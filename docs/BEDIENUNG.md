@@ -54,6 +54,12 @@ Live-Vorschau (4:3). **Frontkamera** / **Rückkamera**, Schieberegler **Belichtu
    «Ausrichtung» (Automatisch / Quer / Hoch / Nicht senden), «Bild drehen» (0°/90°/180°/270°), **Testdruck (Foto mit Banner)**.
    Hinweis in der App: Gäste können bis zu 3 Abzüge drucken. «Druckformat» bietet «Automatisch (4x6)», `QW410-4x4` und `QW410-4x6`. Im Screenshot sind Einpassen, Quer und 90° gewählt (Werte dieses Tablets, keine allgemeine Empfehlung).
 
+### Reiter «Fotos» (Foto-Verlauf; noch nicht auf dem Tablet getestet, kein Screenshot)
+
+Die letzten Fotos (Standard 6, höchstens 24 Stunden; beides einstellbar) mit Vorschaubild, Uhrzeit sowie Status von Druck und Download. Ein Tippen öffnet die Grossansicht mit
+**Erneut drucken** (1–3 Abzüge; bei einem Fehler bis zu zweimal neu versucht, je mit 1 Abzug), **Erneut hochladen** (zeigt den neuen QR-Code), **Exportieren** (Dateien im Ordner «Downloads/Fotobox»)
+und **Löschen** (PIN). **Alle löschen** fragt zuerst nach und verlangt die PIN. Schlägt ein Druck fehl, steht am Reiter «(!)». Gäste sehen diese Liste nie.
+
 ### Reiter «Warteschlange»
 
 ![Setup Warteschlange](bilder/setup-warteschlange.jpg)
@@ -90,7 +96,7 @@ Hinweis zum Netz, der Knopf **Android-WLAN-Einstellungen öffnen**, darunter der
      Schlägt es fehl: Hinweis «Der Download-Link konnte nicht erstellt werden …» und **Nochmals versuchen** (das Foto wartet zusätzlich in der Warteschlange).
    - Rechts bzw. unten **DRUCK-VERSION** mit **−** / **+** (Anzahl Abzüge, 1–3) und **DRUCKEN**. Danach der Fortschritt, bei Erfolg
      «Ihr Foto wird gedruckt.». Bei Fehler «Drucken nicht möglich …» und der Ausweg **Über Android-Druckdialog drucken**.
-   - Der grosse **✓**-Knopf unten rechts beendet und führt zum Startbildschirm. Nach **90 Sekunden** ohne Eingabe passiert das automatisch.
+   - Der grosse **✓**-Knopf unten rechts beendet und führt zum Startbildschirm. Nach **90 Sekunden** ohne Eingabe passiert das automatisch (einstellbar im Setup unter «Ablauf»; solange gedruckt wird, läuft die Zeit nicht ab).
    - Ist «Foto automatisch drucken» eingeschaltet, startet der Druck (1 Abzug) ohne Knopfdruck.
 
 ### Verwaltung / Beenden aus dem Retail-Modus
