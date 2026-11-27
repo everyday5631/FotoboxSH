@@ -105,3 +105,5 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
     die frühere Mietbox hielt Fotos etwa 40 Tage, unklar wo). Befund: Die Nextcloud-Freigabe wird **ohne Ablaufdatum** angelegt (Traktandum 21). **Nächste Arbeit in einem neuen Chat:** Foto-Verlauf + Zeitlimit + Druckwarteschlange, dann Wartungsmodus, dann Töne.
     Ebenfalls beschlossen: Töne mit Rückfall auf einen von Android erzeugten Ton; **Gäste sehen beim pausierten Drucker keinen Hinweis**; Traktandum 14 (Zugangsdaten) schliesst die Nutzerperson selbst ab.
     Einstiegs-Prompt für den nächsten Chat: `docs/START-NEUER-CHAT.md`.
+    **Traktandum 22: Automatische Update-Prüfung** (Obtainium oder eigenständig in der App); Entscheid und Risiken (öffentliches Debug-Zertifikat) in `docs/ERKENNTNISSE-2026-11-27.md`, Abschnitt 9.3.
+    Stand: PR #12 und #14 gemergt (27.11.2026), `main` = `c347c24`; `dev-build` ist ein laufend überschriebenes Pre-Release.
