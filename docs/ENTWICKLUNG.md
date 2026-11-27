@@ -11,7 +11,7 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
 
 ## Ablauf der App
 
-1. **Splash** → **Setup-Modus** (Reiter Konfiguration, Kamera, Drucker, Warteschlange, WLAN; Start-Knopf unten; ⏻ beendet die App nach PIN).
+1. **Splash** → **Setup-Modus** (Reiter von links nach rechts, je weiter links desto technischer: System, Drucker, QR & Upload, Kamera, Ablauf, Aussehen, Fotos; Start-Knopf unten; ⏻ beendet die App nach PIN).
 2. **Retail-Modus** (Kiosk): **Welcome** (Hintergrund, Logo, Überschrift, «jetzt starten») → **Kamera** (Live-Bild, Timer) → **Result**
    (digitale Version mit QR-Code links, Druck-Version mit «DRUCKEN» rechts, Haken = fertig). Nach einstellbaren 90 s ohne Eingabe zurück zum Start (pausiert beim Drucken).
    Beenden: langer Druck auf Logo/Banner, dann PIN (Standard `1234`).

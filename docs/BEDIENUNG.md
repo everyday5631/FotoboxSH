@@ -16,6 +16,21 @@ Oben die Reiter, unten der grosse **Start**-Knopf, oben rechts **⏻** (App been
 
 ![Setup: App beenden](bilder/setup-app-beenden.jpg)
 
+**Reihenfolge der Reiter (neu seit Version 0.1.14x, Zweig `claude/festive-lamport-h0abxg`):** von links nach rechts, je weiter links desto technischer (einmal einrichten), je weiter rechts desto näher am Alltag.
+Die Screenshots weiter unten zeigen noch die alte Aufteilung («Konfiguration», «Warteschlange», «WLAN»); die Inhalte sind unverändert, nur anders verteilt:
+
+| Reiter (neu) | Inhalt | Früher |
+|---|---|---|
+| **System** | WLAN und WCMPlus-Status, Sicherheit (PIN, Kiosk), Freistellungs-Technik (Haarmodell, Diagnose-Zeile) | WLAN, Konfiguration |
+| **Drucker** | WCMPlus-Verbindung, Drucker-WLAN, Druckformat, Testdruck | Drucker |
+| **QR & Upload** | Upload-Ziel und Zugang, Upload-Warteschlange, QR-Code von Hand | Konfiguration, Warteschlange |
+| **Kamera** | Front-/Rückkamera, Belichtung, Zoom | Kamera |
+| **Ablauf** | Timer, automatisch drucken, Zeitlimit des Ergebnisses | Konfiguration |
+| **Aussehen** | Banner, Foto-Hintergründe, Startbildschirm | Konfiguration |
+| **Fotos** | Foto-Verlauf | neu |
+
+Beim Öffnen des Setups erscheint zuerst «Aussehen». Die Anzahl wartender Uploads steht in Klammern am Reiter «QR & Upload», ein «(!)» am Reiter «Fotos» zeigt einen fehlgeschlagenen Druck.
+
 ### Reiter «Konfiguration»
 
 ![Setup Konfiguration, oben](bilder/setup-konfiguration-1.jpg)

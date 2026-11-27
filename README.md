@@ -25,14 +25,14 @@ Dokumentation für Dritte:
 
 ## Funktionen
 
-- **Setup-Modus** (Einrichtung): Reiter **Konfiguration**, **Kamera**, **Drucker**, **Warteschlange**, **WLAN**. Unten der grosse
+- **Setup-Modus** (Einrichtung): Reiter (links technisch, rechts Alltag) **System**, **Drucker**, **QR & Upload**, **Kamera**, **Ablauf**, **Aussehen**, **Fotos**. Unten der grosse
   **Start**-Knopf, oben ⏻ = App beenden (nach PIN).
 - **Retail-Modus** (Gäste, Kiosk/Vollbild): Startbildschirm (Hintergrundbild, Logo, Überschrift, Start-Knopf) → Live-Kamera →
   Timer (3, 5 oder 10 s) → Ergebnis mit **QR-Code** («Zum Herunterladen scannen»), Anzahl Abzüge (1–3) und **DRUCKEN**.
   Nach 90 s ohne Eingabe geht es zurück zum Start.
 - **Foto und Banner:** Pro Foto entstehen zwei Bilder: die **Druck-Version** (3:2, 10 × 15 cm, Banner unten mit Logo mittig und frei
   wählbarem Text links und rechts, je max. 28 Zeichen) und die **digitale Version** (Originalformat, Banner optional). Hochgeladen wird
-  die digitale, gedruckt die Druck-Version. Im Setup (Reiter Konfiguration) einstellbar: **Textfarbe** (Schwarz, Gold, Navy, Regenbogen),
+  die digitale, gedruckt die Druck-Version. Im Setup (Reiter Aussehen) einstellbar: **Textfarbe** (Schwarz, Gold, Navy, Regenbogen),
   **eigenes Logo** (PNG/JPG; «Standard-Logo» stellt das Sonnhalde-Logo wieder her), **Transparenz** des Banner-Hintergrunds (0–100 %;
   bei 100 % steht der Banner unter dem Foto, darunter liegt er durchscheinend auf dem Foto) und **Banner auf der digitalen Version** (ein/aus).
 - **QR-Code:** Das Foto wird nach **Nextcloud** oder **SharePoint** (Power Automate) hochgeladen; der Freigabe-Link wird als QR-Code
@@ -41,7 +41,7 @@ Dokumentation für Dritte:
   App zum Drucken kurz ins Drucker-WLAN und danach zurück.
 - **Kiosk:** Vollbild, Zurück-Taste gesperrt, Bildschirm bleibt an; Beenden nur mit PIN.
 
-- **Foto-Hintergrund** (wie bei Teams): Die Betreiberin bzw. der Betreiber legt im Setup (Reiter Konfiguration, «Foto – Hintergrund») die Bilder fest
+- **Foto-Hintergrund** (wie bei Teams): Die Betreiberin bzw. der Betreiber legt im Setup (Reiter Aussehen, «Foto – Hintergrund») die Bilder fest
   (z. B. einen Wald) und wählt die Vorauswahl; die Gäste tippen auf dem Kamera-Bildschirm unten auf ein Bild («Hintergrund wählen», abschaltbar). Die Personen werden auf dem Tablet freigestellt (ML Kit, ohne Internet, nichts wird hochgeladen) und vor dieses Bild gesetzt.
   Mitgeliefert sind Platzhalter in den Sonnhalde-Farben; eigene Bilder lassen sich aus der Galerie hinzufügen und löschen. Über dem Live-Bild liegt der gewählte
   Hintergrund halbtransparent als Andeutung; freigestellt wird erst im fertigen Foto (Druck und QR-Code). Schlägt die Erkennung fehl, wird das Originalfoto verwendet.
