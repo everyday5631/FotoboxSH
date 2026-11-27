@@ -21,7 +21,7 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
 |---|---|
 | `kiosk` | Device-Admin-Receiver, Lock-Task/Vollbild, PIN. Voller Kiosk nur als Device Owner (`adb shell dpm set-device-owner ch.sonnhalde.fotobox/.kiosk.AdminReceiver`), sonst «Bildschirm fixieren». |
 | `camera` | CameraX: Retail-Kamera, Setup-Panel (Front/Rück, Belichtung, Zoom). Kamera nur beim Verlassen des Bildschirms freigeben, **nicht** an State koppeln (sonst «Not bound to a valid Camera»). |
-| `photo` | `PhotoComposer` (Druck- und digitale Version, Banner), `BackgroundLibrary` (mitgelieferte Platzhalter in `app/src/main/assets/backgrounds/`, eigene Bilder in `files/backgrounds/`), `BackgroundRemover` (ML-Kit-Selfie-Segmentierung, Person vor gewähltes Bild setzen). Einstellung: `WcmConfig.backgroundId` (`asset:…` / `file:…`, leer = aus). |
+| `photo` | `PhotoComposer` (Druck- und digitale Version, Banner), `BackgroundLibrary` (mitgelieferte Platzhalter in `app/src/main/assets/backgrounds/`, eigene Bilder in `files/backgrounds/`), `BackgroundRemover` (ML-Kit-Selfie-Segmentierung, Person vor gewähltes Bild setzen). Einstellung: `WcmConfig.backgroundId` (`asset:…` / `file:…`, leer = aus) als Vorauswahl, `backgroundGuestChoice` = Gäste wählen auf dem Kamera-Bildschirm (`UiState.guestBackgroundId`, zurückgesetzt beim Zurück zum Startbildschirm). |
 | `print` | `Ipp` (Codec), `IppPrinter` (Suche, Auswahl der Warteschlange, Druck), `PdfWrap` (JPEG → PDF 4x6), `PrinterNetwork` (WLAN-Wechsel), `PhotoPrinter` (Android-Druckdialog als Ausweg). |
 | `upload` | `NextcloudUploader` (WebDAV + OCS-Freigabe, Schrittmeldungen 1/4–4/4), `SharePointUploader` (Power-Automate-Flow, Vertrag in `docs/power-automate-flow.md`), `UploadQueue` (fehlgeschlagene Fotos). |
 | `wcm` | `WcmConfig`/`WcmSettings` (alle Einstellungen), `WcmClient` (Erreichbarkeit des Portals). |
@@ -59,7 +59,8 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
 - Schrift: **Arial ist die offizielle Schrift des Corporate Designs** (Nutzerperson). Der Vermerk im Design-Repo `Se-Design` (Definitionen-Blatt nennt Open Sans/Source Serif Pro) gilt damit als geklärt.
 - Kein Video/GIF-Hintergrund, kein E-Mail-Versand (UpReach hat sie).
 - Foto-Hintergrund: Die Freistellung läuft erst nach der Aufnahme (ML Kit `segmentation-selfie`, Modell in der App, einige hundert ms bis wenige Sekunden je nach Tablet).
-  Das Live-Bild der Kamera zeigt den echten Hintergrund. Bei Fehlern der Erkennung oder fehlendem Bild bleibt das Originalfoto. Haare, Hände und Gruppen
+  Im Live-Bild liegt der gewählte Hintergrund nur halbtransparent über der Kamera (Andeutung, keine Freistellung). Bei Fehlern der Erkennung oder fehlendem Bild bleibt das Originalfoto;
+  der Grund steht als Hinweis auf dem Ergebnis-Bildschirm (`UiState.backgroundNote`) und im Logcat (Tag `Fotobox`, auch Personenanteil), ebenso «keine Person erkannt» (<1 %) und «ganzes Bild als Person» (>97 %). Haare, Hände und Gruppen
   sind die Schwachstellen des Modells; Randqualität nur auf dem Tablet beurteilbar.
 
 ## Offene Punkte (Reihenfolge nach Wunsch der Nutzerperson)

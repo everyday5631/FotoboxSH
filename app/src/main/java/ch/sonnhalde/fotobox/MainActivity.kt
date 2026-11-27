@@ -38,6 +38,7 @@ class MainActivity : ComponentActivity() {
                         onClearLogo = vm::clearBannerLogo,
                         onAddBackground = vm::addBackground,
                         onDeleteBackground = vm::deleteBackground,
+                        onSelectBackground = vm::selectBackground,
                         onPhotoCaptured = vm::onPhotoCaptured,
                         onCameraError = vm::showError,
                         onRetryUpload = vm::uploadPhoto,

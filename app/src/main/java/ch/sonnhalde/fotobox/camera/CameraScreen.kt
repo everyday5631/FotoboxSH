@@ -19,15 +19,20 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import ch.sonnhalde.fotobox.R
+import ch.sonnhalde.fotobox.photo.BackgroundLibrary
 import ch.sonnhalde.fotobox.photo.PhotoComposer
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,6 +44,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -47,6 +53,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
@@ -58,9 +65,11 @@ import androidx.core.content.ContextCompat
 import ch.sonnhalde.fotobox.ui.Notice
 import ch.sonnhalde.fotobox.ui.Sonn
 import ch.sonnhalde.fotobox.ui.SonnhaldeBanner
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -85,6 +94,10 @@ fun CameraScreen(
     exposureIndex: Int,
     zoomRatio: Float,
     message: String?,
+    showBackgroundPicker: Boolean,
+    selectedBackground: String,
+    backgroundsVersion: Int,
+    onSelectBackground: (String) -> Unit,
     onCaptured: (File) -> Unit,
     onFailure: (String) -> Unit,
     onAdmin: () -> Unit,
@@ -153,6 +166,14 @@ fun CameraScreen(
         }
     }
 
+    val library = remember { BackgroundLibrary(context) }
+    val items = remember(backgroundsVersion) { library.all() }
+    val selected = selectedBackground.takeIf { id -> items.any { it.id == id } }.orEmpty()
+    // Halbtransparente Andeutung des gewaehlten Hintergrunds ueber dem Live-Bild (kein echtes Freistellen im Live-Bild).
+    val overlay by produceState<android.graphics.Bitmap?>(null, selected, backgroundsVersion) {
+        value = if (selected.isEmpty()) null else withContext(Dispatchers.IO) { library.load(selected, 1280) }
+    }
+
     Box(
         Modifier.fillMaxSize().background(Sonn.NavyDeep)
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { shoot() },
@@ -165,6 +186,11 @@ fun CameraScreen(
                 color = Sonn.Cream, fontSize = 20.sp, textAlign = TextAlign.Center,
                 modifier = Modifier.align(Alignment.Center).padding(24.dp),
             )
+        }
+
+        // Vorschau: gewaehlter Hintergrund halbtransparent ueber dem Live-Bild. Beruehrungen gehen durch (Tippen loest weiter aus).
+        overlay?.let {
+            Image(it.asImageBitmap(), contentDescription = null, contentScale = ContentScale.Crop, alpha = 0.5f, modifier = Modifier.fillMaxSize())
         }
 
         // Oben links: Logo (langer Druck = Verwaltung) und Zurueck-Knopf
@@ -190,6 +216,40 @@ fun CameraScreen(
                 .clickable { shoot() },
         )
 
+        // Unten Mitte: Hintergrund waehlen (wie bei Teams); das Ergebnis erscheint im fertigen Foto.
+        if (showBackgroundPicker && countdown == null) {
+            if (items.isNotEmpty()) {
+                Column(
+                    Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 16.dp)
+                        .clip(RoundedCornerShape(12.dp)).background(Color(0xB3000000)).padding(10.dp)
+                        // Taps neben den Kacheln sollen kein Foto ausloesen.
+                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text("Hintergrund wählen", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Text("Vorschau nur angedeutet; im Foto stehen Sie vor dem Bild.", color = Color(0xCCFFFFFF), fontSize = 12.sp)
+                    Row(
+                        Modifier.padding(top = 8.dp).widthIn(max = 640.dp).horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        BackgroundChoice(selected = selected.isEmpty(), onClick = { onSelectBackground("") }) {
+                            Text("Original", color = Sonn.Navy, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
+                        for (item in items) {
+                            BackgroundChoice(selected = item.id == selected, onClick = { onSelectBackground(item.id) }) {
+                                val thumb by produceState<android.graphics.Bitmap?>(null, item.id, backgroundsVersion) {
+                                    value = withContext(Dispatchers.IO) { library.thumbnail(item.id) }
+                                }
+                                thumb?.let {
+                                    Image(it.asImageBitmap(), contentDescription = item.label, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         countdown?.let { c ->
             Text(
                 text = c.toString(), color = Sonn.LogoGold, fontSize = 160.sp, fontWeight = FontWeight.Bold,
@@ -197,4 +257,16 @@ fun CameraScreen(
             )
         }
     }
+}
+
+@Composable
+private fun BackgroundChoice(selected: Boolean, onClick: () -> Unit, content: @Composable () -> Unit) {
+    Box(
+        Modifier.size(width = 112.dp, height = 76.dp)
+            .clip(RoundedCornerShape(6.dp))
+            .background(Color.White)
+            .border(if (selected) 4.dp else 1.dp, if (selected) Sonn.LogoGold else Color(0x66FFFFFF), RoundedCornerShape(6.dp))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { content() }
 }
