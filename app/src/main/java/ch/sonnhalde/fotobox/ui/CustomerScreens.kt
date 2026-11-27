@@ -1,7 +1,6 @@
 package ch.sonnhalde.fotobox.ui
 
 import android.content.res.Configuration
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,12 +25,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -39,12 +37,11 @@ import androidx.compose.ui.unit.sp
 import ch.sonnhalde.fotobox.AppVersion
 import ch.sonnhalde.fotobox.MAX_COPIES
 import ch.sonnhalde.fotobox.PrintState
+import ch.sonnhalde.fotobox.R
 import ch.sonnhalde.fotobox.UiState
 import ch.sonnhalde.fotobox.UploadState
 import ch.sonnhalde.fotobox.print.PhotoPrinter
 import kotlinx.coroutines.delay
-import kotlin.math.cos
-import kotlin.math.sin
 
 /**
  * Das Zeitlimit des Ergebnis-Bildschirms ist einstellbar (Setup). Solange gedruckt wird, laeuft es nicht ab; haengt ein Druckschritt,
@@ -52,23 +49,18 @@ import kotlin.math.sin
  */
 private const val PRINT_PAUSE_CAP_MS = 300_000L
 
-/** Startbild beim Oeffnen der App: Sonne + Wortmarke (wie der UpReach-Splashscreen). */
+/** Startbild beim Oeffnen der App: Sonnhalde-Logo, «FOTOBOX» und Versionsanzeige. */
 @Composable
 fun SplashScreen(onDone: () -> Unit) {
     LaunchedEffect(Unit) { delay(1800); onDone() }
     Box(Modifier.fillMaxSize().background(Sonn.Navy), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(20.dp)) {
-            Canvas(Modifier.size(120.dp)) {
-                val c = Offset(size.width / 2, size.height / 2)
-                drawCircle(Sonn.LogoGold, radius = size.minDimension * 0.22f, center = c)
-                for (i in 0 until 8) {
-                    val a = Math.toRadians(i * 45.0)
-                    val dir = Offset(cos(a).toFloat(), sin(a).toFloat())
-                    drawLine(Sonn.LogoGold, c + dir * (size.minDimension * 0.34f), c + dir * (size.minDimension * 0.46f),
-                        strokeWidth = 8f, cap = StrokeCap.Round)
-                }
-            }
-            Text("SONNHALDE", color = Sonn.Cream, fontSize = 32.sp, fontWeight = FontWeight.Bold, letterSpacing = 6.sp)
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(24.dp)) {
+            // Echtes Sonnhalde-Logo (weiss, fuer dunklen Grund) statt der frueher gezeichneten Sonne mit Text.
+            Image(
+                painter = painterResource(R.drawable.sonnhalde_logo_zusatz_neg),
+                contentDescription = "Sonnhalde, Pflege- und Betreuungszentrum",
+                modifier = Modifier.fillMaxWidth(0.55f),
+            )
             Text("FOTOBOX", color = Sonn.LogoGold, fontSize = 16.sp, fontWeight = FontWeight.Bold, letterSpacing = 4.sp)
         }
         Text(
