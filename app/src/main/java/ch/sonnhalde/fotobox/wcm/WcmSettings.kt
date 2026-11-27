@@ -34,6 +34,8 @@ data class WcmConfig(
     val backgroundGuestChoice: Boolean = true,
     /** Diagnose-Zeile zum Foto-Hintergrund auf dem Ergebnis-Bildschirm (fuer Tests; im Einsatz ausschalten). */
     val backgroundDiagnostics: Boolean = true,
+    /** Haarmodell bei der Freistellung verwenden (genauere Haare, etwas mehr Rechenzeit); aus = nur Personen-Erkennung. */
+    val backgroundHairModel: Boolean = true,
     /** Countdown vor der Aufnahme in Sekunden. */
     val timerSeconds: Int = 3,
     /** Ueberschrift und Knopf-Text auf dem Startbildschirm des Retail-Modus. */
@@ -86,6 +88,7 @@ class WcmSettings(context: Context) {
         backgroundId = prefs.getString("backgroundId", "").orEmpty(),
         backgroundGuestChoice = prefs.getBoolean("backgroundGuestChoice", true),
         backgroundDiagnostics = prefs.getBoolean("backgroundDiagnostics", true),
+        backgroundHairModel = prefs.getBoolean("backgroundHairModel", true),
         timerSeconds = prefs.getInt("timerSeconds", 3),
         exposureIndex = prefs.getInt("exposureIndex", 0),
         zoomRatio = prefs.getFloat("zoomRatio", 1f),
@@ -124,6 +127,7 @@ class WcmSettings(context: Context) {
             .putString("backgroundId", config.backgroundId)
             .putBoolean("backgroundGuestChoice", config.backgroundGuestChoice)
             .putBoolean("backgroundDiagnostics", config.backgroundDiagnostics)
+            .putBoolean("backgroundHairModel", config.backgroundHairModel)
             .putInt("timerSeconds", config.timerSeconds)
             .putInt("exposureIndex", config.exposureIndex)
             .putFloat("zoomRatio", config.zoomRatio)

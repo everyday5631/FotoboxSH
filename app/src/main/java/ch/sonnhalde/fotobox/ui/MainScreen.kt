@@ -119,6 +119,7 @@ fun MainScreen(state: UiState, actions: Actions) {
             exposureIndex = state.config.exposureIndex,
             zoomRatio = state.config.zoomRatio,
             message = state.message,
+            processingText = state.processing,
             showBackgroundPicker = state.config.backgroundGuestChoice,
             selectedBackground = state.guestBackgroundId ?: state.config.backgroundId,
             backgroundsVersion = state.backgroundsVersion,

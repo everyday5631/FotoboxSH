@@ -54,18 +54,22 @@ object BackgroundRemover {
     }
 
     /** Foto mit Personen vor [background]. Wirft eine Ausnahme, wenn die Erkennung fehlschlaegt (Aufrufer nimmt dann das Originalfoto). */
-    class Replacement(val image: Bitmap, /** Anteil des Bildes, der als Person erkannt wurde (0..1). */ val personShare: Float)
+    class Replacement(
+        val image: Bitmap,
+        /** Anteil des Bildes, der als Person erkannt wurde (0..1). */ val personShare: Float,
+        /** Dauer der ganzen Freistellung in Millisekunden. */ val millis: Long,
+    )
 
     /** Rohe Modellausgabe: Konfidenz «Person» 0..1 je Pixel der Maske (w x h, meist 256 x 256). */
     private class Confidence(val w: Int, val h: Int, val v: FloatArray)
 
-    suspend fun replace(context: Context, photo: Bitmap, background: Bitmap): Replacement {
+    suspend fun replace(context: Context, photo: Bitmap, background: Bitmap, useHairModel: Boolean = true): Replacement {
         val t0 = System.currentTimeMillis()
         val person = downscale(photo, MAX_SIDE)
         val w = person.width
         val h = person.height
 
-        val (soft, gw, gh) = buildMask(context, person)
+        val (soft, gw, gh) = buildMask(context, person, useHairModel)
         var sum = 0.0
         for (v in soft) sum += v
         val share = (sum / soft.size).toFloat()
@@ -98,8 +102,9 @@ object BackgroundRemover {
             }
             out.setPixels(personRow, 0, w, 0, y, w, 1)
         }
-        Log.i(TAG, "Freistellung %d ms (Foto %dx%d, Maske %dx%d)".format(System.currentTimeMillis() - t0, w, h, gw, gh))
-        return Replacement(out, share)
+        val millis = System.currentTimeMillis() - t0
+        Log.i(TAG, "Freistellung %d ms (Foto %dx%d, Maske %dx%d, Haarmodell %s)".format(millis, w, h, gw, gh, if (useHairModel) "an" else "aus"))
+        return Replacement(out, share, millis)
     }
 
     /** Mischt zwei Farben (ARGB, deckend): [alpha] 255 = nur [front], 0 = nur [back]. */
@@ -121,7 +126,7 @@ object BackgroundRemover {
      * 3. Haarmodell: ergaenzt Haare nahe an der Person, wo die Personen-Erkennung sie abschneidet.
      * 4. Guided Filter: der Maskenrand wird an die Kanten des Fotos angelegt (Haare, Schultern), statt am groben Raster zu haengen.
      */
-    private suspend fun buildMask(context: Context, person: Bitmap): Triple<FloatArray, Int, Int> {
+    private suspend fun buildMask(context: Context, person: Bitmap, useHairModel: Boolean): Triple<FloatArray, Int, Int> {
         val small = downscale(person, SEGMENT_SIDE)
         val gw = small.width
         val gh = small.height
@@ -161,7 +166,7 @@ object BackgroundRemover {
             }
         }
 
-        addHair(context, small, cropBitmap, cropRegion, mask, gw, gh)
+        if (useHairModel) addHair(context, small, cropBitmap, cropRegion, mask, gw, gh)
 
         // Fuehrungsbild: Helligkeit des Erkennungsbildes.
         val px = IntArray(gw * gh)

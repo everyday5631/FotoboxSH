@@ -393,8 +393,14 @@ private fun BackgroundSection(state: UiState, actions: Actions) {
             else "Gäste sehen keine Auswahl; es gilt immer das Bild oben.",
             color = Sonn.Stone, fontSize = 12.sp,
         )
+        SettingSwitch("Haarmodell verwenden", cfg.backgroundHairModel) { actions.onConfigQuiet(cfg.copy(backgroundHairModel = it)) }
+        Text(
+            if (cfg.backgroundHairModel) "Ergänzt Haare bei der Freistellung, braucht etwas mehr Rechenzeit. Ausschalten, wenn das Foto zu lange dauert; es gilt dann nur die Personen-Erkennung."
+            else "Aus: nur die Personen-Erkennung, schneller, Haare können weniger genau sein.",
+            color = Sonn.Stone, fontSize = 12.sp,
+        )
         SettingSwitch("Diagnose-Zeile zum Hintergrund auf dem Ergebnis (für Tests)", cfg.backgroundDiagnostics) { actions.onConfigQuiet(cfg.copy(backgroundDiagnostics = it)) }
-        Text("Zeigt nach jedem Foto, welcher Hintergrund galt und wie viel des Bildes als Person erkannt wurde. Im Einsatz ausschalten.", color = Sonn.Stone, fontSize = 12.sp)
+        Text("Zeigt nach jedem Foto, welcher Hintergrund galt, wie viel des Bildes als Person erkannt wurde und wie lange die Freistellung gedauert hat. Im Einsatz ausschalten.", color = Sonn.Stone, fontSize = 12.sp)
         Text("Die mitgelieferten Bilder sind Platzhalter in den Sonnhalde-Farben; eigene Bilder lassen sich hinzufügen und wieder löschen.", color = Sonn.Stone, fontSize = 12.sp)
     }
 }

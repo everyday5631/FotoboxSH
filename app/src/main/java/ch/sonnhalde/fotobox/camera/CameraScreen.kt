@@ -39,6 +39,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -94,6 +95,8 @@ fun CameraScreen(
     exposureIndex: Int,
     zoomRatio: Float,
     message: String?,
+    /** Text, solange nach dem Ausloesen das Foto verarbeitet wird (null = nichts in Arbeit). */
+    processingText: String?,
     showBackgroundPicker: Boolean,
     selectedBackground: String,
     backgroundsVersion: Int,
@@ -116,6 +119,8 @@ fun CameraScreen(
     val previewView = remember { PreviewView(context).apply { scaleType = PreviewView.ScaleType.FILL_CENTER } }
     val imageCapture = remember { ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY).build() }
     var countdown by remember { mutableStateOf<Int?>(null) }
+    // Der Ausloeser ist gedrueckt (Aufnahme laeuft); ab hier zeigt der Bildschirm «Foto gemacht, bitte warten».
+    var shot by remember { mutableStateOf(false) }
     // Niemand tippt mehr: zurueck zum Startbildschirm.
     LaunchedEffect(Unit) { delay(60_000); if (countdown == null) onBack() }
 
@@ -150,17 +155,18 @@ fun CameraScreen(
     }
 
     fun shoot() {
-        if (countdown != null || !hasPermission) return
+        if (countdown != null || shot || processingText != null || !hasPermission) return
         scope.launch {
             for (i in timerSeconds downTo 1) { countdown = i; delay(1000) }
             countdown = null
+            shot = true
             val file = File.createTempFile("foto", ".jpg", context.cacheDir)
             imageCapture.takePicture(
                 ImageCapture.OutputFileOptions.Builder(file).build(),
                 ContextCompat.getMainExecutor(context),
                 object : ImageCapture.OnImageSavedCallback {
                     override fun onImageSaved(output: ImageCapture.OutputFileResults) = onCaptured(file)
-                    override fun onError(exc: ImageCaptureException) = onFailure("Foto fehlgeschlagen: ${exc.message}")
+                    override fun onError(exc: ImageCaptureException) { shot = false; onFailure("Foto fehlgeschlagen: ${exc.message}") }
                 },
             )
         }
@@ -251,10 +257,36 @@ fun CameraScreen(
         }
 
         countdown?.let { c ->
-            Text(
-                text = c.toString(), color = Sonn.LogoGold, fontSize = 160.sp, fontWeight = FontWeight.Bold,
-                modifier = Modifier.align(Alignment.Center),
-            )
+            Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = c.toString(), color = Sonn.LogoGold, fontSize = 160.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "Bitte lächeln und kurz stillhalten", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(Color(0x99000000)).padding(horizontal = 20.dp, vertical = 10.dp),
+                )
+            }
+        }
+
+        // Nach dem Ausloesen: klare Rueckmeldung, solange das Foto verarbeitet wird (Freistellung und Banner dauern einige Sekunden).
+        if (shot || processingText != null) {
+            Box(
+                Modifier.fillMaxSize().background(Color(0xE61E2D3D))
+                    // Taps waehrend der Verarbeitung ignorieren.
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { },
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
+                    CircularProgressIndicator(color = Sonn.LogoGold, strokeWidth = 6.dp, modifier = Modifier.size(88.dp))
+                    Text("Foto aufgenommen!", color = Color.White, fontSize = 40.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 28.dp))
+                    Text(
+                        processingText ?: "Einen Moment bitte …", color = Sonn.LogoGold, fontSize = 24.sp,
+                        textAlign = TextAlign.Center, modifier = Modifier.padding(top = 12.dp),
+                    )
+                    Text(
+                        "Sie können sich jetzt wieder bewegen.", color = Color(0xCCFFFFFF), fontSize = 20.sp,
+                        textAlign = TextAlign.Center, modifier = Modifier.padding(top = 20.dp),
+                    )
+                }
+            }
         }
     }
 }

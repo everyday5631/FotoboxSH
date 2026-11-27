@@ -81,6 +81,10 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
 8. Banner (PR #8) und Foto-Hintergrund/Icon (PR #11) auf dem Tablet testen. Stand 27.11.2026 (Build 0.1.99): Banner mit Text links/rechts und eigenem Logo,
    Icon und Foto-Hintergrund laufen (Qualität der Freistellung mässig, Verbesserung offen: Schwellen, Maskenrand, ggf. anderes Modell; erst mit echten Personen testen).
    Noch ungeprüft: Banner-Transparenz und Druck auf Papier.
+   Test mit echten Personen (27.11.2026) für die Nutzerperson «voll okay»; Freistellung 250-640 ms (erstes Foto langsamer: Modell wird geladen). **Stresstest steht aus**
+   (viele Fotos hintereinander, warmes Tablet, Akku-Sparmodus, Gruppen): Dauer steht im Logcat (`Freistellung … ms`) und, solange die Diagnose-Zeile an ist, auf dem Ergebnis.
+   Einstellung «Haarmodell verwenden» (Konfiguration, Foto-Hintergrund) schaltet das Haarmodell ab, falls es zu lange dauert; dann gilt nur die Personen-Erkennung.
+   Rückmeldung für Gäste: Hinweis im Countdown («lächeln und kurz stillhalten») und nach dem Auslösen ein Bildschirm «Foto aufgenommen» mit Fortschritt und Schritten.
 9. **Anpassbares Erscheinungsbild für Vermietung an Dritte** («Benutzerdefinitionen», nicht dringend, aber geplant): Die Fotobox soll an andere vermietet werden können,
    deshalb darf nichts Sonnhalde-spezifisch fest eingebaut sein. Heute fest in der App: `sonnhalde_logo_vertical` (Startbildschirm, Kamera-Bildschirm),
    `sonnhalde_logo_zusatz_neg` (weisses Logo im dunklen Kopfbalken der App), Icon und Farben. Gewünscht: eigenes Logo je Verwendung, weil dieselbe Datei nicht überall passt
