@@ -97,6 +97,13 @@ class Actions(
     val onRetryQueue: () -> Unit,
     val onClearQueue: () -> Unit,
     val onSetPin: (String) -> Unit,
+    /** Foto-Verlauf (Setup, Reiter «Fotos»). */
+    val onRefreshHistory: () -> Unit,
+    val onReprint: (String, Int) -> Unit,
+    val onReupload: (String) -> Unit,
+    val onExportEntry: (String) -> Unit,
+    val onDeleteEntry: (String) -> Unit,
+    val onClearHistory: () -> Unit,
 )
 
 @Composable

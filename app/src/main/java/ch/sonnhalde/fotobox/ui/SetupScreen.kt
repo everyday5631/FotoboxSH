@@ -60,7 +60,7 @@ import ch.sonnhalde.fotobox.wcm.WcmStatus
 import kotlin.math.roundToInt
 
 enum class SetupTab(val label: String) {
-    Config("Konfiguration"), Camera("Kamera"), Printer("Drucker"), Queue("Warteschlange"), Wifi("WLAN"),
+    Config("Konfiguration"), Camera("Kamera"), Printer("Drucker"), Photos("Fotos"), Queue("Warteschlange"), Wifi("WLAN"),
 }
 
 /**
@@ -92,7 +92,12 @@ fun SetupScreen(state: UiState, actions: Actions) {
                 for (t in SetupTab.values()) {
                     val active = t == tab
                     Text(
-                        t.label + if (t == SetupTab.Queue && state.queueCount > 0) " (${state.queueCount})" else "",
+                        t.label + when {
+                            t == SetupTab.Queue && state.queueCount > 0 -> " (${state.queueCount})"
+                            // Hinweis fuer das Personal: ein Foto wurde nicht gedruckt.
+                            t == SetupTab.Photos && state.history.any { it.printStatus == "failed" } -> " (!)"
+                            else -> ""
+                        },
                         color = if (active) Sonn.Navy else Color(0xFFC8D2DC), fontWeight = FontWeight.Bold, fontSize = 14.sp,
                         modifier = Modifier.clip(MaterialShape).background(if (active) Sonn.HeadingGold else Color.Transparent)
                             .clickable { tab = t }.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -132,6 +137,7 @@ fun SetupScreen(state: UiState, actions: Actions) {
                     PrinterWifiSection(state, actions)
                     PrintFormatSection(state, actions)
                 }
+                SetupTab.Photos -> HistoryTab(state, actions)
                 SetupTab.Queue -> {
                     SectionTitle("SharePoint", "Upload-Warteschlange")
                     StatusLine(if (state.queueCount == 0) Sonn.Ok else Sonn.Error, "Wartende Fotos: ${state.queueCount}")
@@ -171,7 +177,7 @@ fun SetupScreen(state: UiState, actions: Actions) {
 }
 
 @Composable
-private fun <T> ChoiceRow(label: String, options: List<Pair<String, T>>, selected: T, onSelect: (T) -> Unit) {
+internal fun <T> ChoiceRow(label: String, options: List<Pair<String, T>>, selected: T, onSelect: (T) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(label, fontWeight = FontWeight.Bold, fontSize = 14.sp)
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -335,6 +341,17 @@ private fun ConfigTab(state: UiState, actions: Actions) {
             }
         }
         SettingSwitch("Foto automatisch drucken (1 Abzug)", cfg.autoPrint) { actions.onConfigQuiet(cfg.copy(autoPrint = it)) }
+
+        var timeout by remember(cfg.resultTimeoutSeconds) { mutableFloatStateOf(cfg.resultTimeoutSeconds.toFloat()) }
+        val timeoutShown = (timeout / 10).roundToInt() * 10
+        Text("Ergebnis-Bildschirm: zurück zum Start nach $timeoutShown s ohne Eingabe", fontWeight = FontWeight.Bold)
+        Slider(
+            value = timeout, onValueChange = { timeout = it },
+            onValueChangeFinished = { actions.onConfigQuiet(cfg.copy(resultTimeoutSeconds = (timeout / 10).roundToInt() * 10)) },
+            valueRange = 30f..300f, steps = 26,
+            colors = SliderDefaults.colors(thumbColor = Sonn.Navy, activeTrackColor = Sonn.HeadingGold),
+        )
+        Text("Solange gedruckt wird, läuft die Zeit nicht ab (höchstens 5 Minuten pro Druckschritt).", color = Sonn.Stone, fontSize = 12.sp)
     }
 
     UploadSection(state, actions)

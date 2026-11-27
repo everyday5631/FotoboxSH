@@ -57,6 +57,12 @@ class MainActivity : ComponentActivity() {
                         onRetryQueue = vm::retryQueue,
                         onClearQueue = vm::clearQueue,
                         onSetPin = vm::setPin,
+                        onRefreshHistory = vm::refreshHistory,
+                        onReprint = vm::printEntry,
+                        onReupload = vm::reuploadEntry,
+                        onExportEntry = vm::exportEntry,
+                        onDeleteEntry = vm::deleteEntry,
+                        onClearHistory = vm::clearHistory,
                     ),
                 )
             }

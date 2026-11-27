@@ -13,6 +13,8 @@ import ch.sonnhalde.fotobox.kiosk.Kiosk
 import ch.sonnhalde.fotobox.photo.BackgroundLibrary
 import ch.sonnhalde.fotobox.photo.BackgroundRemover
 import ch.sonnhalde.fotobox.photo.BannerStyle
+import ch.sonnhalde.fotobox.photo.HistoryEntry
+import ch.sonnhalde.fotobox.photo.PhotoHistory
 import ch.sonnhalde.fotobox.photo.PhotoComposer
 import ch.sonnhalde.fotobox.print.IppPrinter
 import ch.sonnhalde.fotobox.print.PrinterNetwork
@@ -34,6 +36,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -90,10 +94,19 @@ data class UiState(
     val message: String? = null,
     /** Text, solange nach dem Ausloesen das Foto verarbeitet wird (null = nichts in Arbeit); der Kamera-Bildschirm zeigt ihn an. */
     val processing: String? = null,
+    /** Foto im Verlauf, das gerade auf dem Ergebnis-Bildschirm steht (null = keins); Druck und Upload melden sich damit zurueck. */
+    val historyId: String? = null,
+    /** Foto-Verlauf (neueste zuerst) fuer den Reiter «Fotos» im Setup. */
+    val history: List<HistoryEntry> = emptyList(),
 )
 
 const val MAX_COPIES = 3
 private const val TAG = "Fotobox"
+/** Wiederholungen nach einem fehlgeschlagenen Druck, je mit nur einem Abzug (Papier ist knapp, keine doppelten Mengen). */
+private const val PRINT_RETRIES = 2
+private const val PRINT_RETRY_PAUSE_MS = 3_000L
+
+private class Prepared(val print: Bitmap, val digital: Bitmap, val digitalJpeg: ByteArray, val entry: HistoryEntry)
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val settings = WcmSettings(app)
@@ -111,13 +124,29 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private fun uploadConfigured(c: WcmConfig) =
         if (c.uploadTarget == "nextcloud") c.ncUrl.isNotBlank() && c.ncUser.isNotBlank() && c.ncPassword.isNotBlank() else c.flowUrl.isNotBlank()
 
-    private var photoJpeg: ByteArray? = null
+    private val history = PhotoHistory(app)
+    /** Druckauftraege laufen nacheinander: der WLAN-Wechsel zum Drucker vertraegt keine zwei gleichzeitig. */
+    private val printLock = Mutex()
     private var digitalJpeg: ByteArray? = null
 
     private val _state = MutableStateFlow(UiState(config = settings.load(), retail = Kiosk.isEnabled(app), queueCount = UploadQueue(app).count()))
     val state: StateFlow<UiState> = _state.asStateFlow()
 
-    init { checkConnection() }
+    init {
+        checkConnection()
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { history.recoverInterrupted() }
+            refreshHistory()
+            // Auftraege, die vor einem Neustart noch warteten, gehen nicht verloren: aeltester zuerst.
+            val waiting = withContext(Dispatchers.IO) { history.list().filter { it.printStatus == "pending" }.reversed() }
+            for (e in waiting) enqueuePrint(e.id, e.copies)
+            // Alte Fotos auch dann entfernen, wenn lange kein neues Foto gemacht wird.
+            while (true) {
+                kotlinx.coroutines.delay(30 * 60_000L)
+                refreshHistory()
+            }
+        }
+    }
 
     fun updateConfig(config: WcmConfig) {
         settings.save(config)
@@ -156,9 +185,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun startCapture() = _state.update { it.copy(screen = Screen.Start, message = null) }
 
     fun exitRetail() {
-        photoJpeg = null
         digitalJpeg = null
-        _state.update { it.copy(retail = false, screen = Screen.Overview, photo = null, digital = null, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, message = null) }
+        _state.update { it.copy(retail = false, screen = Screen.Overview, historyId = null, photo = null, digital = null, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, message = null) }
     }
 
     // ---- Startbildschirm-Hintergrund (Bild aus der Galerie) ----
@@ -288,10 +316,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun backToHome() {
         // Upload fehlgeschlagen und Kunde geht weiter: Foto in die Warteschlange, nichts geht verloren.
         digitalJpeg?.let { if (_state.value.upload is UploadState.Failed) { queue.add(it); refreshQueue() } }
-        photoJpeg = null
         digitalJpeg = null
         _state.update {
-            it.copy(screen = Screen.Welcome, processing = null, guestBackgroundId = null, backgroundNote = null, photo = null, digital = null, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, savedUri = null, message = null)
+            it.copy(screen = Screen.Welcome, processing = null, historyId = null, guestBackgroundId = null, backgroundNote = null, photo = null, digital = null, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, savedUri = null, message = null)
         }
     }
 
@@ -320,17 +347,21 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     val print = PhotoComposer.compose(getApplication(), upright, style)
                     val digital = PhotoComposer.composeDigital(getApplication(), upright, style)
                     fun jpeg(b: Bitmap) = ByteArrayOutputStream().also { b.compress(Bitmap.CompressFormat.JPEG, 92, it) }.toByteArray()
-                    Triple(print, digital, jpeg(print) to jpeg(digital))
+                    val digitalBytes = jpeg(digital)
+                    // Zuerst auf den Speicher: Druck und erneutes Drucken lesen das Foto von dort, es geht nicht mehr verloren.
+                    val entry = history.add(jpeg(print), digitalBytes)
+                    history.prune(config.historyCount, config.historyHours)
+                    Prepared(print, digital, digitalBytes, entry)
                 }
             }
             file.delete()
             prepared.fold(
-                onSuccess = { (bmp, digital, jpegs) ->
-                    photoJpeg = jpegs.first
-                    digitalJpeg = jpegs.second
+                onSuccess = { p ->
+                    digitalJpeg = p.digitalJpeg
                     _state.update {
-                        it.copy(screen = Screen.Result, processing = null, backgroundNote = backgroundNote, photo = bmp, digital = digital, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, savedUri = null, message = null)
+                        it.copy(screen = Screen.Result, processing = null, historyId = p.entry.id, backgroundNote = backgroundNote, photo = p.print, digital = p.digital, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, savedUri = null, message = null)
                     }
+                    refreshHistory()
                     val upload = startUpload()
                     // Beim Wechsel ins Drucker-WLAN zuerst hochladen (braucht Internet), dann drucken.
                     if (_state.value.config.autoPrint) {
@@ -346,27 +377,37 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun startUpload(): Job? {
         val jpeg = digitalJpeg ?: return null
+        val id = _state.value.historyId
         val config = _state.value.config
         if (!uploadConfigured(config)) {
             _state.update { it.copy(upload = UploadState.Failed("Upload ist nicht eingerichtet (Setup → Konfiguration).")) }
+            if (id != null) markUpload(id, "failed", "")
             return null
         }
         _state.update { it.copy(upload = UploadState.Uploading) }
         return viewModelScope.launch {
             val result = uploadTo(config, "foto-${System.currentTimeMillis()}.jpg", jpeg)
+            // Nur der Bildschirm dieses Fotos darf den Zustand aendern: ein spaet fertiger Upload darf dem naechsten Gast keinen fremden QR-Code zeigen.
             result.fold(
                 onSuccess = { url ->
                     val qr = withContext(Dispatchers.Default) { QrCode.generate(url) }
-                    _state.update { it.copy(upload = UploadState.Done(url), qrBitmap = qr, qrInput = url) }
+                    if (_state.value.historyId == id) _state.update { it.copy(upload = UploadState.Done(url), qrBitmap = qr, qrInput = url) }
+                    if (id != null) markUpload(id, "done", url)
                 },
                 onFailure = { e ->
                     // Hat der Kunde den Ergebnis-Bildschirm schon verlassen, geht das Foto in die Warteschlange.
-                    if (_state.value.screen != Screen.Result) { queue.add(jpeg); refreshQueue() }
-                    if (_state.value.screen == Screen.Result) {
-                        _state.update { it.copy(upload = UploadState.Failed(e.message ?: "Upload fehlgeschlagen")) }
-                    }
+                    if (_state.value.historyId != id) { queue.add(jpeg); refreshQueue() }
+                    else _state.update { it.copy(upload = UploadState.Failed(e.message ?: "Upload fehlgeschlagen")) }
+                    if (id != null) markUpload(id, "failed", "")
                 },
             )
+        }
+    }
+
+    private fun markUpload(id: String, status: String, url: String) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { history.update(id) { it.copy(uploadStatus = status, uploadUrl = url) } }
+            refreshHistory()
         }
     }
 
@@ -374,8 +415,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private fun printerWifiActive(c: WcmConfig = _state.value.config) = c.printerWifiSwitch && c.printerWifiSsid.isNotBlank()
 
     /** Verbindet voruebergehend mit dem Drucker-WLAN, druckt und gibt es wieder frei (Android kehrt ins Internet-WLAN zurueck). */
-    private suspend fun printViaPrinterWifi(config: WcmConfig, img: PrintImage, copies: Int): Result<String> {
-        fun stage(text: String) = _state.update { it.copy(print = PrintState.Printing(text)) }
+    private suspend fun printViaPrinterWifi(config: WcmConfig, img: PrintImage, copies: Int, stage: (String) -> Unit): Result<String> {
         stage("Verbinde mit Drucker-WLAN … (bitte ggf. «Verbinden» bestätigen)")
         val result = printerNetwork.use(config.printerWifiSsid, config.printerWifiPassword) { network ->
             stage("Foto wird gedruckt …")
@@ -390,28 +430,86 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         return result
     }
 
+    /** «DRUCKEN» auf dem Ergebnis-Bildschirm (und Auto-Druck): das aktuelle Foto mit der gewaehlten Zahl Abzuege. */
     fun printPhoto() {
-        val jpeg = photoJpeg ?: return
-        val bmp = _state.value.photo ?: return
-        _state.update { it.copy(print = PrintState.Printing()) }
+        val id = _state.value.historyId ?: return
+        if (_state.value.print is PrintState.Printing) return // Doppeltippen startet keinen zweiten Auftrag
+        enqueuePrint(id, _state.value.copies)
+    }
+
+    /** Erneut drucken aus dem Foto-Verlauf (Setup). */
+    fun printEntry(id: String, copies: Int) {
+        val busy = _state.value.history.firstOrNull { it.id == id }?.printStatus in listOf("pending", "printing")
+        if (busy) { _state.update { it.copy(message = "Für dieses Foto läuft schon ein Druckauftrag.") }; return }
+        enqueuePrint(id, copies)
+        _state.update { it.copy(message = "Druckauftrag gesendet (bei Fehlern bis zu $PRINT_RETRIES Wiederholungen mit je 1 Abzug).") }
+    }
+
+    /** Legt den Auftrag dauerhaft ab (Status «pending» im Verlauf) und fuehrt ihn aus, sobald kein anderer Druck laeuft. */
+    private fun enqueuePrint(id: String, copies: Int) {
+        val n = copies.coerceIn(1, MAX_COPIES)
         viewModelScope.launch {
-            val config = _state.value.config
-            val useWifi = printerWifiActive(config)
-            if (useWifi) {
-                // Upload braucht Internet: erst fertig werden lassen, bevor das WLAN gewechselt wird.
-                kotlinx.coroutines.withTimeoutOrNull(30_000) { _state.first { it.upload !is UploadState.Uploading } }
-            }
-            val img = withContext(Dispatchers.Default) { encodeForPrint(bmp, config.printRotation, jpeg) }
-            val copies = _state.value.copies
-            val result = if (useWifi) printViaPrinterWifi(config, img, copies) else printer.printJpeg(config, img.bytes, img.width, img.height, copies)
-            _state.update {
-                it.copy(print = result.fold(
-                    onSuccess = { text -> PrintState.Done(text) },
-                    onFailure = { e -> PrintState.Failed(e.message ?: "Drucken fehlgeschlagen") },
-                ))
-            }
-            if (useWifi) { refreshQueue(); }
+            withContext(Dispatchers.IO) { history.update(id) { it.copy(copies = n, printStatus = "pending", printDetail = "Auftrag wartet") } }
+            refreshHistory()
+            if (_state.value.historyId == id) _state.update { it.copy(print = PrintState.Printing("Druckauftrag wartet …")) }
+            printLock.withLock { runPrintJob(id, n) }
         }
+    }
+
+    /**
+     * Druckt das Foto aus dem Verlauf. Schlaegt der erste Versuch fehl, folgen bis zu [PRINT_RETRIES] Wiederholungen mit je
+     * einem Abzug (nicht noch einmal die ganze Menge). Das Ergebnis steht im Verlauf; der Ergebnis-Bildschirm zeigt es nur,
+     * solange dieses Foto noch angezeigt wird.
+     */
+    private suspend fun runPrintJob(id: String, copies: Int) {
+        val config = _state.value.config
+        fun ui(change: (UiState) -> UiState) { if (_state.value.historyId == id) _state.update(change) }
+        fun stage(text: String) = ui { it.copy(print = PrintState.Printing(text)) }
+        suspend fun finish(ok: Boolean, detail: String) {
+            withContext(Dispatchers.IO) {
+                history.update(id) { it.copy(printStatus = if (ok) "done" else "failed", printDetail = detail, printedAt = System.currentTimeMillis()) }
+            }
+            ui { it.copy(print = if (ok) PrintState.Done(detail) else PrintState.Failed(detail)) }
+            refreshHistory()
+        }
+
+        val jpeg = withContext(Dispatchers.IO) { history.printFile(id).takeIf { it.exists() }?.readBytes() }
+        if (jpeg == null) { finish(false, "Das Foto ist nicht mehr gespeichert."); return }
+        withContext(Dispatchers.IO) { history.update(id) { it.copy(printStatus = "printing", printDetail = "Druck läuft") } }
+        refreshHistory()
+        stage("Foto wird gedruckt …")
+
+        val useWifi = printerWifiActive(config)
+        if (useWifi) {
+            // Upload braucht Internet: erst fertig werden lassen, bevor das WLAN gewechselt wird.
+            kotlinx.coroutines.withTimeoutOrNull(30_000) { _state.first { it.upload !is UploadState.Uploading } }
+        }
+        val img = withContext(Dispatchers.Default) { encodeJpegForPrint(jpeg, config.printRotation) }
+
+        val attempts = 1 + PRINT_RETRIES
+        var result: Result<String> = Result.failure(IllegalStateException("kein Versuch"))
+        var attempt = 0
+        while (attempt < attempts) {
+            attempt++
+            val n = if (attempt == 1) copies else 1
+            if (attempt > 1) {
+                stage("Neuer Versuch $attempt von $attempts … (1 Abzug)")
+                kotlinx.coroutines.delay(PRINT_RETRY_PAUSE_MS)
+            }
+            result = if (useWifi) printViaPrinterWifi(config, img, n, ::stage)
+            else printer.printJpeg(config, img.bytes, img.width, img.height, n)
+            if (result.isSuccess) break
+            Log.w(TAG, "Druck Versuch $attempt von $attempts fehlgeschlagen: ${result.exceptionOrNull()?.message}")
+        }
+        result.fold(
+            onSuccess = { text ->
+                finish(true, if (attempt == 1) text else "$text (nach Versuch $attempt, nur 1 Abzug; gewünscht waren $copies)")
+            },
+            onFailure = { e ->
+                finish(false, "${e.message ?: "Drucken fehlgeschlagen"} (nach $attempts Versuchen)")
+            },
+        )
+        if (useWifi) refreshQueue()
     }
 
     /** Setup-Test: ins Drucker-WLAN wechseln, Warteschlangen suchen, zurueck. */
@@ -488,6 +586,81 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val rotated = if (rotation % 360 == 0) bmp else Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, Matrix().apply { postRotate(rotation.toFloat()) }, true)
         val jpeg = ByteArrayOutputStream().also { rotated.compress(Bitmap.CompressFormat.JPEG, 92, it) }.toByteArray()
         return PrintImage(jpeg, rotated.width, rotated.height)
+    }
+
+    /** Wie [encodeForPrint], aber ab dem gespeicherten JPEG des Verlaufs. */
+    private fun encodeJpegForPrint(jpeg: ByteArray, rotation: Int): PrintImage {
+        if (rotation % 360 == 0) {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size, bounds)
+            return PrintImage(jpeg, bounds.outWidth, bounds.outHeight)
+        }
+        val bmp = BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size) ?: error("Bild nicht lesbar")
+        return encodeForPrint(bmp, rotation, null)
+    }
+
+    // ---- Foto-Verlauf (Setup, Reiter «Fotos») ----
+
+    /** Raeumt nach Anzahl und Alter auf und liest den Verlauf neu ein. */
+    fun refreshHistory() {
+        viewModelScope.launch {
+            val config = _state.value.config
+            val list = withContext(Dispatchers.IO) {
+                history.prune(config.historyCount, config.historyHours)
+                history.list()
+            }
+            _state.update { it.copy(history = list) }
+        }
+    }
+
+    fun reuploadEntry(id: String) {
+        val config = _state.value.config
+        if (!uploadConfigured(config)) { _state.update { it.copy(message = "Upload ist nicht eingerichtet.") }; return }
+        viewModelScope.launch {
+            _state.update { it.copy(message = "Foto wird hochgeladen …") }
+            val jpeg = withContext(Dispatchers.IO) { history.digitalFile(id).takeIf { it.exists() }?.readBytes() }
+            if (jpeg == null) { _state.update { it.copy(message = "Das Foto ist nicht mehr gespeichert.") }; return@launch }
+            uploadTo(config, "foto-${System.currentTimeMillis()}.jpg", jpeg).fold(
+                onSuccess = { url ->
+                    withContext(Dispatchers.IO) { history.update(id) { it.copy(uploadStatus = "done", uploadUrl = url) } }
+                    _state.update { it.copy(message = "Hochgeladen. Der neue QR-Code steht bei diesem Foto.") }
+                },
+                onFailure = { e ->
+                    withContext(Dispatchers.IO) { history.update(id) { it.copy(uploadStatus = "failed") } }
+                    _state.update { it.copy(message = "Upload fehlgeschlagen: ${e.message ?: "unbekannt"}") }
+                },
+            )
+            refreshHistory()
+        }
+    }
+
+    fun exportEntry(id: String) {
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) { runCatching { history.exportToDownloads(id) } }
+            _state.update {
+                it.copy(message = result.fold(
+                    onSuccess = { n -> "$n Dateien im Ordner «Downloads/Fotobox» gespeichert." },
+                    onFailure = { e -> "Exportieren fehlgeschlagen: ${e.message}" },
+                ))
+            }
+        }
+    }
+
+    fun deleteEntry(id: String) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { history.delete(id) }
+            refreshHistory()
+        }
+    }
+
+    fun clearHistory() {
+        viewModelScope.launch {
+            // Wartende oder laufende Druckauftraege bleiben (der Druck ist Pflicht).
+            withContext(Dispatchers.IO) {
+                history.list().filter { it.printStatus != "pending" && it.printStatus != "printing" }.forEach { history.delete(it.id) }
+            }
+            refreshHistory()
+        }
     }
 
     // ---- Upload-Warteschlange ----

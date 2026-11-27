@@ -45,8 +45,11 @@ import kotlinx.coroutines.delay
 import kotlin.math.cos
 import kotlin.math.sin
 
-/** Zeit ohne Eingabe, nach der der Ergebnis-Bildschirm zum Start zurueckkehrt. */
-private const val RESULT_TIMEOUT_MS = 90_000L
+/**
+ * Das Zeitlimit des Ergebnis-Bildschirms ist einstellbar (Setup). Solange gedruckt wird, laeuft es nicht ab; haengt ein Druckschritt,
+ * gilt spaetestens nach dieser Zeit trotzdem das Limit (jeder neue Schritt startet sie neu).
+ */
+private const val PRINT_PAUSE_CAP_MS = 300_000L
 
 /** Startbild beim Oeffnen der App: Sonne + Wortmarke (wie der UpReach-Splashscreen). */
 @Composable
@@ -78,8 +81,13 @@ fun SplashScreen(onDone: () -> Unit) {
 @Composable
 fun ResultScreen(state: UiState, actions: Actions, onAdmin: () -> Unit) {
     val context = LocalContext.current
-    // Zurueck zum Start, wenn niemand mehr tippt; jede Zustandsaenderung startet die Frist neu.
-    LaunchedEffect(state.photo, state.print, state.upload) { delay(RESULT_TIMEOUT_MS); actions.onHome() }
+    // Zurueck zum Start, wenn niemand mehr tippt; jede Zustandsaenderung startet die Frist neu, waehrend des Druckens ist sie pausiert.
+    val timeoutMs = state.config.resultTimeoutSeconds * 1000L
+    val printing = state.print is PrintState.Printing
+    LaunchedEffect(state.photo, state.print, state.upload, timeoutMs) {
+        delay(if (printing) maxOf(timeoutMs, PRINT_PAUSE_CAP_MS) else timeoutMs)
+        actions.onHome()
+    }
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     // Bild eines Blocks: im Querformat (fit) bekommt es nur den Platz, der neben QR-Code bzw. Druckknopf bleibt,
