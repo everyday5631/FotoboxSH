@@ -22,6 +22,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
@@ -40,17 +41,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ch.sonnhalde.fotobox.AppVersion
 import ch.sonnhalde.fotobox.MAX_COPIES
+import ch.sonnhalde.fotobox.R
 import ch.sonnhalde.fotobox.UiState
 import ch.sonnhalde.fotobox.camera.CameraSetupPanel
 import ch.sonnhalde.fotobox.kiosk.Kiosk
 import ch.sonnhalde.fotobox.photo.BackgroundLibrary
 import ch.sonnhalde.fotobox.photo.BannerStyle
+import ch.sonnhalde.fotobox.photo.Graphemes
 import ch.sonnhalde.fotobox.photo.PhotoComposer
 import ch.sonnhalde.fotobox.wcm.WcmStatus
 import kotlin.math.roundToInt
@@ -79,8 +83,11 @@ fun SetupScreen(state: UiState, actions: Actions) {
             Modifier.fillMaxWidth().background(Sonn.Navy).statusBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("SONN", color = Sonn.Cream, fontWeight = FontWeight.Bold, fontSize = 14.sp, letterSpacing = 2.sp)
-            Text("HALDE", color = Sonn.LogoGold, fontWeight = FontWeight.Bold, fontSize = 14.sp, letterSpacing = 2.sp)
+            Image(
+                painter = painterResource(R.drawable.sonnhalde_logo_zusatz_neg),
+                contentDescription = "Sonnhalde, Pflege- und Betreuungszentrum",
+                modifier = Modifier.height(34.dp),
+            )
             Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()).padding(start = 20.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (t in SetupTab.values()) {
                     val active = t == tab
@@ -92,8 +99,16 @@ fun SetupScreen(state: UiState, actions: Actions) {
                     )
                 }
             }
+            // Kennzeichnung: das hier ist die Einrichtung, nicht die Gaesteansicht.
+            Text(
+                "ENTWICKLERMODUS", color = Sonn.LogoGold, fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 1.5.sp,
+                modifier = Modifier.padding(horizontal = 8.dp).border(1.dp, Sonn.LogoGold, MaterialShape).padding(horizontal = 8.dp, vertical = 4.dp),
+            )
             // Ausschalten-Symbol: App beenden (nach PIN)
-            Text("⏻", color = Sonn.Cream, fontSize = 22.sp, modifier = Modifier.clickable { askExit = true }.padding(8.dp))
+            Icon(
+                painter = painterResource(R.drawable.ic_power), contentDescription = "App beenden", tint = Sonn.Cream,
+                modifier = Modifier.clickable { askExit = true }.padding(8.dp).size(28.dp),
+            )
         }
 
         Column(
@@ -254,13 +269,13 @@ private fun ConfigTab(state: UiState, actions: Actions) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionTitle("Foto", "Banner unten")
         SonnField("Text im Banner links", cfg.bannerTextLeft, KeyboardType.Text) {
-            actions.onConfigQuiet(cfg.copy(bannerTextLeft = it.take(PhotoComposer.MAX_TEXT)))
+            actions.onConfigQuiet(cfg.copy(bannerTextLeft = Graphemes.take(it, PhotoComposer.MAX_TEXT)))
         }
-        Text("${cfg.bannerTextLeft.length}/${PhotoComposer.MAX_TEXT} Zeichen", color = Sonn.Stone, fontSize = 12.sp)
+        Text("${Graphemes.count(cfg.bannerTextLeft)}/${PhotoComposer.MAX_TEXT} Zeichen (Emoji sind erlaubt)", color = Sonn.Stone, fontSize = 12.sp)
         SonnField("Text im Banner rechts (z. B. Personalfest 2027)", cfg.bannerText, KeyboardType.Text) {
-            actions.onConfigQuiet(cfg.copy(bannerText = it.take(PhotoComposer.MAX_TEXT)))
+            actions.onConfigQuiet(cfg.copy(bannerText = Graphemes.take(it, PhotoComposer.MAX_TEXT)))
         }
-        Text("${cfg.bannerText.length}/${PhotoComposer.MAX_TEXT} Zeichen", color = Sonn.Stone, fontSize = 12.sp)
+        Text("${Graphemes.count(cfg.bannerText)}/${PhotoComposer.MAX_TEXT} Zeichen (Emoji sind erlaubt)", color = Sonn.Stone, fontSize = 12.sp)
 
         Text("Textfarbe", fontWeight = FontWeight.Bold)
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -302,8 +317,8 @@ private fun ConfigTab(state: UiState, actions: Actions) {
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionTitle("Retail-Modus", "Startbildschirm")
-        SonnField("Überschrift", cfg.startTitle, KeyboardType.Text, singleLine = false) { actions.onConfigQuiet(cfg.copy(startTitle = it.take(60))) }
-        SonnField("Text des Start-Knopfs", cfg.startButton, KeyboardType.Text) { actions.onConfigQuiet(cfg.copy(startButton = it.take(24))) }
+        SonnField("Überschrift", cfg.startTitle, KeyboardType.Text, singleLine = false) { actions.onConfigQuiet(cfg.copy(startTitle = Graphemes.take(it, 60))) }
+        SonnField("Text des Start-Knopfs", cfg.startButton, KeyboardType.Text) { actions.onConfigQuiet(cfg.copy(startButton = Graphemes.take(it, 24))) }
         val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> uri?.let(actions.onPickBackground) }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             SonnButton("Hintergrundbild wählen", primary = false, onClick = { picker.launch("image/*") })
@@ -378,8 +393,14 @@ private fun BackgroundSection(state: UiState, actions: Actions) {
             else "Gäste sehen keine Auswahl; es gilt immer das Bild oben.",
             color = Sonn.Stone, fontSize = 12.sp,
         )
+        SettingSwitch("Haarmodell verwenden", cfg.backgroundHairModel) { actions.onConfigQuiet(cfg.copy(backgroundHairModel = it)) }
+        Text(
+            if (cfg.backgroundHairModel) "Ergänzt Haare bei der Freistellung, braucht etwas mehr Rechenzeit. Ausschalten, wenn das Foto zu lange dauert; es gilt dann nur die Personen-Erkennung."
+            else "Aus: nur die Personen-Erkennung, schneller, Haare können weniger genau sein.",
+            color = Sonn.Stone, fontSize = 12.sp,
+        )
         SettingSwitch("Diagnose-Zeile zum Hintergrund auf dem Ergebnis (für Tests)", cfg.backgroundDiagnostics) { actions.onConfigQuiet(cfg.copy(backgroundDiagnostics = it)) }
-        Text("Zeigt nach jedem Foto, welcher Hintergrund galt und wie viel des Bildes als Person erkannt wurde. Im Einsatz ausschalten.", color = Sonn.Stone, fontSize = 12.sp)
+        Text("Zeigt nach jedem Foto, welcher Hintergrund galt, wie viel des Bildes als Person erkannt wurde und wie lange die Freistellung gedauert hat. Im Einsatz ausschalten.", color = Sonn.Stone, fontSize = 12.sp)
         Text("Die mitgelieferten Bilder sind Platzhalter in den Sonnhalde-Farben; eigene Bilder lassen sich hinzufügen und wieder löschen.", color = Sonn.Stone, fontSize = 12.sp)
     }
 }

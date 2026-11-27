@@ -88,6 +88,8 @@ data class UiState(
     val qrBitmap: Bitmap? = null,
     val savedUri: Uri? = null,
     val message: String? = null,
+    /** Text, solange nach dem Ausloesen das Foto verarbeitet wird (null = nichts in Arbeit); der Kamera-Bildschirm zeigt ihn an. */
+    val processing: String? = null,
 )
 
 const val MAX_COPIES = 3
@@ -239,7 +241,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * Setzt die Personen auf dem Foto vor den gewaehlten Hintergrund. Ohne Auswahl, bei fehlendem Bild oder wenn die
      * Erkennung scheitert, bleibt das Originalfoto: ein Gast verliert nie sein Foto.
      */
-    private suspend fun applyBackground(photo: Bitmap, backgroundId: String, diagnostics: Boolean): Bitmap {
+    private suspend fun applyBackground(photo: Bitmap, backgroundId: String, diagnostics: Boolean, useHairModel: Boolean): Bitmap {
         backgroundNote = null
         if (backgroundId.isBlank()) {
             if (diagnostics) backgroundNote = "Hintergrund: keiner gewählt (Original)."
@@ -252,14 +254,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             backgroundNote = "Hintergrund konnte nicht geladen werden, es gilt das Originalfoto."
             return photo
         }
-        return runCatching { BackgroundRemover.replace(photo, background) }.fold(
+        return runCatching { BackgroundRemover.replace(getApplication<Application>(), photo, background, useHairModel) }.fold(
             onSuccess = { r ->
                 Log.i(TAG, "Hintergrund ersetzt, Personenanteil %.3f".format(r.personShare))
                 // Fast nichts oder fast alles als Person erkannt: fuer die Fehlersuche sichtbar machen.
                 backgroundNote = when {
                     r.personShare < 0.01f -> "Keine Person erkannt: das Foto zeigt nur den Hintergrund."
                     r.personShare > 0.97f -> "Der Hintergrund wurde nicht erkannt (ganzes Bild als Person): das Foto bleibt fast unverändert."
-                    else -> if (diagnostics) "Hintergrund «$label»: ${(r.personShare * 100).toInt()} % des Bildes als Person erkannt." else null
+                    else -> if (diagnostics) "Hintergrund «$label»: ${(r.personShare * 100).toInt()} % des Bildes als Person erkannt, Freistellung ${"%.1f".format(r.millis / 1000f)} s." else null
                 }
                 r.image
             },
@@ -289,12 +291,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         photoJpeg = null
         digitalJpeg = null
         _state.update {
-            it.copy(screen = Screen.Welcome, guestBackgroundId = null, backgroundNote = null, photo = null, digital = null, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, savedUri = null, message = null)
+            it.copy(screen = Screen.Welcome, processing = null, guestBackgroundId = null, backgroundNote = null, photo = null, digital = null, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, savedUri = null, message = null)
         }
     }
 
     fun showError(text: String) {
-        _state.update { it.copy(screen = Screen.Welcome, message = text) }
+        _state.update { it.copy(screen = Screen.Welcome, message = text, processing = null) }
         // Meldung nach einigen Sekunden ausblenden, damit der Startbildschirm sauber bleibt.
         viewModelScope.launch {
             kotlinx.coroutines.delay(8000)
@@ -303,13 +305,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun onPhotoCaptured(file: File) {
+        // Rueckmeldung fuer den Gast: das Foto ist gemacht, jetzt wird es verarbeitet (dauert einige Sekunden).
+        _state.update { it.copy(processing = "Ihr Foto wird vorbereitet …") }
         viewModelScope.launch {
             val prepared = withContext(Dispatchers.Default) {
                 runCatching {
                     val captured = decodeUpright(file)
                     val config = _state.value.config
                     val backgroundId = if (config.backgroundGuestChoice) _state.value.guestBackgroundId ?: config.backgroundId else config.backgroundId
-                    val upright = applyBackground(captured, backgroundId, config.backgroundDiagnostics)
+                    if (backgroundId.isNotBlank()) _state.update { it.copy(processing = "Sie werden freigestellt und vor Ihren Hintergrund gesetzt …") }
+                    val upright = applyBackground(captured, backgroundId, config.backgroundDiagnostics, config.backgroundHairModel)
+                    _state.update { it.copy(processing = "Ihr Foto wird fertiggestellt …") }
                     val style = BannerStyle.from(config)
                     val print = PhotoComposer.compose(getApplication(), upright, style)
                     val digital = PhotoComposer.composeDigital(getApplication(), upright, style)
@@ -323,7 +329,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     photoJpeg = jpegs.first
                     digitalJpeg = jpegs.second
                     _state.update {
-                        it.copy(screen = Screen.Result, backgroundNote = backgroundNote, photo = bmp, digital = digital, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, savedUri = null, message = null)
+                        it.copy(screen = Screen.Result, processing = null, backgroundNote = backgroundNote, photo = bmp, digital = digital, upload = UploadState.Idle, print = PrintState.Idle, copies = 1, qrBitmap = null, savedUri = null, message = null)
                     }
                     val upload = startUpload()
                     // Beim Wechsel ins Drucker-WLAN zuerst hochladen (braucht Internet), dann drucken.

@@ -1,6 +1,7 @@
 package ch.sonnhalde.fotobox.wcm
 
 import android.content.Context
+import ch.sonnhalde.fotobox.photo.Graphemes
 
 /** Einstellungen (WCMPlus-Drucker und SharePoint-Upload), lokal auf dem Geraet gespeichert. */
 data class WcmConfig(
@@ -33,6 +34,8 @@ data class WcmConfig(
     val backgroundGuestChoice: Boolean = true,
     /** Diagnose-Zeile zum Foto-Hintergrund auf dem Ergebnis-Bildschirm (fuer Tests; im Einsatz ausschalten). */
     val backgroundDiagnostics: Boolean = true,
+    /** Haarmodell bei der Freistellung verwenden (genauere Haare, etwas mehr Rechenzeit); aus = nur Personen-Erkennung. */
+    val backgroundHairModel: Boolean = true,
     /** Countdown vor der Aufnahme in Sekunden. */
     val timerSeconds: Int = 3,
     /** Ueberschrift und Knopf-Text auf dem Startbildschirm des Retail-Modus. */
@@ -85,6 +88,7 @@ class WcmSettings(context: Context) {
         backgroundId = prefs.getString("backgroundId", "").orEmpty(),
         backgroundGuestChoice = prefs.getBoolean("backgroundGuestChoice", true),
         backgroundDiagnostics = prefs.getBoolean("backgroundDiagnostics", true),
+        backgroundHairModel = prefs.getBoolean("backgroundHairModel", true),
         timerSeconds = prefs.getInt("timerSeconds", 3),
         exposureIndex = prefs.getInt("exposureIndex", 0),
         zoomRatio = prefs.getFloat("zoomRatio", 1f),
@@ -115,14 +119,15 @@ class WcmSettings(context: Context) {
             .putString("printerUri", config.printerUri.trim())
             .putBoolean("autoPrint", config.autoPrint)
             .putBoolean("useFrontCamera", config.useFrontCamera)
-            .putString("bannerText", config.bannerText.take(28))
-            .putString("bannerTextLeft", config.bannerTextLeft.take(28))
+            .putString("bannerText", Graphemes.take(config.bannerText, 28))
+            .putString("bannerTextLeft", Graphemes.take(config.bannerTextLeft, 28))
             .putString("bannerColor", config.bannerColor)
             .putInt("bannerAlpha", config.bannerAlpha.coerceIn(0, 100))
             .putBoolean("bannerDigital", config.bannerDigital)
             .putString("backgroundId", config.backgroundId)
             .putBoolean("backgroundGuestChoice", config.backgroundGuestChoice)
             .putBoolean("backgroundDiagnostics", config.backgroundDiagnostics)
+            .putBoolean("backgroundHairModel", config.backgroundHairModel)
             .putInt("timerSeconds", config.timerSeconds)
             .putInt("exposureIndex", config.exposureIndex)
             .putFloat("zoomRatio", config.zoomRatio)
@@ -140,8 +145,8 @@ class WcmSettings(context: Context) {
             .putString("ncUser", config.ncUser.trim())
             .putString("ncPassword", config.ncPassword)
             .putString("ncFolder", config.ncFolder.trim().trim('/'))
-            .putString("startTitle", config.startTitle.take(60))
-            .putString("startButton", config.startButton.take(24))
+            .putString("startTitle", Graphemes.take(config.startTitle, 60))
+            .putString("startButton", Graphemes.take(config.startButton, 24))
             .apply()
     }
 }

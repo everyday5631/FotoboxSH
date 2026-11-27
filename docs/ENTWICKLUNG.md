@@ -6,6 +6,9 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
 > Alles danach (z. B. das anpassbare Banner mit Text links/rechts, Farben, eigenem Logo, Transparenz und Banner auf der digitalen
 > Version, Foto-Hintergrund mit Personen-Freistellung, neues App-Icon) ist nur gebaut, aber noch **nicht auf dem Tablet getestet**. Bei Fehlern ist `v0.1.36` der Rückfallstand.
 
+> **Weiterführend:** `docs/ERKENNTNISSE-2026-11-27.md` hält die Erkenntnisse der Sitzung vom 27.11.2026 fest (Freistellung mit Messwerten und Modellen, Rechenzeit und Speicher,
+> Entscheidungen der Nutzerperson, vollständige Traktandenliste, Testprotokoll). Prüfskripte dazu: `tools/maskcheck/`.
+
 ## Ablauf der App
 
 1. **Splash** → **Setup-Modus** (Reiter Konfiguration, Kamera, Drucker, Warteschlange, WLAN; Start-Knopf unten; ⏻ beendet die App nach PIN).
@@ -62,6 +65,12 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
   Im Live-Bild liegt der gewählte Hintergrund nur halbtransparent über der Kamera (Andeutung, keine Freistellung). Bei Fehlern der Erkennung oder fehlendem Bild bleibt das Originalfoto;
   der Grund steht als Hinweis auf dem Ergebnis-Bildschirm (`UiState.backgroundNote`) und im Logcat (Tag `Fotobox`, auch Personenanteil), ebenso «keine Person erkannt» (<1 %) und «ganzes Bild als Person» (>97 %). Haare, Hände und Gruppen
   sind die Schwachstellen des Modells; Randqualität nur auf dem Tablet beurteilbar.
+  Stand 27.11.2026: Personen-Erkennung in zwei Durchgängen (ganzes Bild, dann Ausschnitt um die Personen), Ränder mit Guided Filter an die Fotokanten
+  gelegt (`photo/MaskMath.kt`), dazu ein Haarmodell (`photo/HairModel.kt`, TensorFlow Lite). Das Haarmodell ist Googles MediaPipe `hair_segmenter.tflite`
+  (512 x 512, 0,8 MB, `app/src/main/assets/models/`; Quelle `storage.googleapis.com/mediapipe-models/image_segmenter/hair_segmenter/float32/latest/`,
+  SHA-256 `2628cf3c…bf84`). Eingang RGB plus leerer 4. Kanal, Ausgang Logits (Hintergrund/Haar). Lizenz laut Modellkarte vor einer Weitergabe prüfen.
+  Auf einem sauberen Porträt ergänzt das Haarmodell fast nichts (das Selfie-Modell findet die Haare schon); der Nutzen auf dem Tablet ist offen. Logcat-Tag `Fotobox`
+  zeigt Dauer und Beitrag (`Haarmodell … zur Maske ergaenzt`). Die Schwellen nach dem Filter (0.40/0.60) sind bewusst eng: breitere Bänder verwischen den Rand.
 
 ## Offene Punkte (Reihenfolge nach Wunsch der Nutzerperson)
 
@@ -72,4 +81,27 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
 5. Fische-Bild als Standard-Hintergrund (`start_background.jpg`), Datei steht noch aus.
 6. Warteschlange automatisch senden, sobald Internet da ist: **bewusst offen gelassen**.
 7. Version 1.0 ausweisen, README für Dritte: **bewusst offen gelassen**.
-8. Banner (PR #8) und Foto-Hintergrund/Icon (PR #11) auf dem Tablet testen.
+8. Banner (PR #8) und Foto-Hintergrund/Icon (PR #11) auf dem Tablet testen. Stand 27.11.2026 (Build 0.1.99): Banner mit Text links/rechts und eigenem Logo,
+   Icon und Foto-Hintergrund laufen (Qualität der Freistellung mässig, Verbesserung offen: Schwellen, Maskenrand, ggf. anderes Modell; erst mit echten Personen testen).
+   Noch ungeprüft: Banner-Transparenz und Druck auf Papier.
+   Test mit echten Personen (27.11.2026) für die Nutzerperson «voll okay»; Freistellung 250-640 ms (erstes Foto langsamer: Modell wird geladen). **Stresstest steht aus**
+   (viele Fotos hintereinander, warmes Tablet, Akku-Sparmodus, Gruppen): Dauer steht im Logcat (`Freistellung … ms`) und, solange die Diagnose-Zeile an ist, auf dem Ergebnis.
+   Einstellung «Haarmodell verwenden» (Konfiguration, Foto-Hintergrund) schaltet das Haarmodell ab, falls es zu lange dauert; dann gilt nur die Personen-Erkennung.
+   Rückmeldung für Gäste: Hinweis im Countdown («lächeln und kurz stillhalten») und nach dem Auslösen ein Bildschirm «Foto aufgenommen» mit Fortschritt und Schritten.
+9. **Anpassbares Erscheinungsbild für Vermietung an Dritte** («Benutzerdefinitionen», nicht dringend, aber geplant): Die Fotobox soll an andere vermietet werden können,
+   deshalb darf nichts Sonnhalde-spezifisch fest eingebaut sein. Heute fest in der App: `sonnhalde_logo_vertical` (Startbildschirm, Kamera-Bildschirm),
+   `sonnhalde_logo_zusatz_neg` (weisses Logo im dunklen Kopfbalken der App), Icon und Farben. Gewünscht: eigenes Logo je Verwendung, weil dieselbe Datei nicht überall passt
+   (Logo für hellen Grund: Startbildschirm und Foto-Banner; Logo für Dunkelblau: Kopfbalken der App), dazu ein eigener Reiter «Benutzerdefinitionen» im Setup, der
+   Logos, Texte und ggf. Farben bündelt. Das Logo im Foto-Banner ist bereits einstellbar (Banner-Einstellungen).
+10. Neu am 27.11.2026 (Einzelheiten und Begründungen in `docs/ERKENNTNISSE-2026-11-27.md`, Abschnitt 9): Rückmeldung für Gäste auf dem Tablet testen; Rechenzeit und Speicher genauer prüfen
+    (Stresstest, `dumpsys meminfo`, Thermal); Knopf «Modell neu laden» im Entwicklermodus; **Druck als Pflicht** (Druckaufträge auf dem Speicher ablegen, erneut versuchen, Meldung ans Personal);
+    Upload-Warteschlange automatisch senden; **Töne** (Countdown, Auslösen, fertig); Banner-Transparenz und Druck prüfen; Lizenz der Haarmodell-Datei und App-Grösse; PR #12 und #14 mergen.
+    **Druck und Kiosk-Beenden zuletzt testen** (Fotopapier knapp, jeder Systemstart des DNP druckt eine Status-Seite).
+    Dazu (Abschnitte 7.4 bis 7.7): **Foto-Verlauf** der letzten ~6 Fotos im Entwicklermodus mit erneutem Drucken/Hochladen (heute ist das Foto nach dem 90-s-Zeitlimit weg und es gibt keinen erneuten Druck),
+    Zeitlimit während des Druckens pausieren, Druckfehler nach dem Verlassen sichtbar machen, Dauertest/Messung, Löschregel der Upload-Warteschlange.
+    Außerdem: **Drucker-Wartungsmodus** («Drucker pausieren / freigeben»: Aufträge werden gespeichert, Drucker kann abgekoppelt, ausgeschaltet oder gewartet werden, danach werden die Aufträge der Reihe nach gedruckt)
+    und ein **Lösch-Knopf** (zusätzlich zum Export) für Foto-Verlauf und Warteschlange; Einzelheiten in `docs/ERKENNTNISSE-2026-11-27.md`, Abschnitt 9.1.
+    Beschlossen am 27.11.2026: Töne mit **echten Tondateien** (freie Lizenz, Quelle im Repo vermerken); Zeitlimit des Ergebnisses **einstellbar**; Aufbewahrung der Fotos auf dem Tablet **kurz** (Frist mit der Sonnhalde klären;
+    die frühere Mietbox hielt Fotos etwa 40 Tage, unklar wo). Befund: Die Nextcloud-Freigabe wird **ohne Ablaufdatum** angelegt (Traktandum 21). **Nächste Arbeit in einem neuen Chat:** Foto-Verlauf + Zeitlimit + Druckwarteschlange, dann Wartungsmodus, dann Töne.
+    Ebenfalls beschlossen: Töne mit Rückfall auf einen von Android erzeugten Ton; **Gäste sehen beim pausierten Drucker keinen Hinweis**; Traktandum 14 (Zugangsdaten) schliesst die Nutzerperson selbst ab.
+    Einstiegs-Prompt für den nächsten Chat: `docs/START-NEUER-CHAT.md`.

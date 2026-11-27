@@ -157,8 +157,8 @@ object PhotoComposer {
     }
 
     private fun drawTexts(canvas: Canvas, style: BannerStyle, width: Int, top: Float, bannerH: Float) {
-        val left = style.textLeft.trim().take(MAX_TEXT)
-        val right = style.textRight.trim().take(MAX_TEXT)
+        val left = Graphemes.take(style.textLeft.trim(), MAX_TEXT)
+        val right = Graphemes.take(style.textRight.trim(), MAX_TEXT)
         if (left.isEmpty() && right.isEmpty()) return
         val margin = width * 0.04f
         val areaW = width * 0.27f
@@ -183,7 +183,10 @@ object PhotoComposer {
         }
     }
 
-    /** Text in der gewaehlten Farbe; «rainbow» faerbt jeden Buchstaben einzeln (mit leichtem Schatten). */
+    /**
+     * Text in der gewaehlten Farbe; «rainbow» faerbt jeden Buchstaben einzeln (mit leichtem Schatten). Emoji werden als Ganzes
+     * gezeichnet (Farb-Glyphe, ohne Schatten) und zaehlen im Farbverlauf nicht mit.
+     */
     private fun drawColored(canvas: Canvas, text: String, x: Float, baseline: Float, paint: Paint, color: String, align: Paint.Align) {
         paint.textAlign = Paint.Align.LEFT
         val total = paint.measureText(text)
@@ -194,13 +197,18 @@ object PhotoComposer {
             return
         }
         var index = 0
-        for (ch in text) {
-            val w = paint.measureText(ch.toString())
-            if (ch != ' ') {
-                paint.color = Color.argb(90, 0, 0, 0)
-                canvas.drawText(ch.toString(), cx + paint.textSize * 0.04f, baseline + paint.textSize * 0.04f, paint)
-                paint.color = RAINBOW[index++ % RAINBOW.size]
-                canvas.drawText(ch.toString(), cx, baseline, paint)
+        for (g in Graphemes.split(text)) {
+            val w = paint.measureText(g)
+            if (g.isNotBlank()) {
+                if (Graphemes.isEmoji(g)) {
+                    paint.color = Color.BLACK
+                    canvas.drawText(g, cx, baseline, paint)
+                } else {
+                    paint.color = Color.argb(90, 0, 0, 0)
+                    canvas.drawText(g, cx + paint.textSize * 0.04f, baseline + paint.textSize * 0.04f, paint)
+                    paint.color = RAINBOW[index++ % RAINBOW.size]
+                    canvas.drawText(g, cx, baseline, paint)
+                }
             }
             cx += w
         }
