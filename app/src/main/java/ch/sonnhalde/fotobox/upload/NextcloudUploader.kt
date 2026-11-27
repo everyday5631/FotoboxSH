@@ -18,7 +18,6 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.IOException
-import java.net.URLDecoder
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -32,8 +31,9 @@ import java.util.concurrent.atomic.AtomicBoolean
  *
  * Gueltigkeit des Links: Nextcloud kennt beim Ablauf einer Freigabe nur ganze **Tage** (`expireDate` = Datum), keine Stunden.
  * Die Frist [WcmConfig.ncShareHours] wird deshalb auf ein Datum umgerechnet, das **nicht frueher** als die gewuenschte
- * Dauer endet (siehe [expireDate]). Stundengenau wird es nur mit [WcmConfig.ncDeleteExpired]: dann loescht die App
- * eigene Fotos (`foto-<ms>.jpg`, `test-<ms>.jpg`) im Upload-Ordner, sobald sie aelter als die Frist sind.
+ * Dauer endet (siehe [expireDate]). Stundengenau wird es mit [WcmConfig.ncRevokeLinks]: dann widerruft die App die
+ * Freigabe-Links eigener Fotos (`foto-<ms>.jpg`, `test-<ms>.jpg`) im Upload-Ordner, sobald sie aelter als die Frist sind.
+ * Die Fotodateien selbst bleiben unberuehrt.
  */
 class NextcloudUploader(
     private val http: OkHttpClient = OkHttpClient.Builder()
@@ -138,7 +138,7 @@ class NextcloudUploader(
      * Nextcloud rechnet nur in ganzen Tagen. Damit der Link **nie frueher** ablaeuft als gewuenscht (auch falls der Server den Tag
      * um 00:00 statt um 23:59 enden laesst), wird auf den Tag **nach** dem Zieldatum aufgerundet; mindestens morgen, weil Nextcloud
      * ein Ablaufdatum von heute als «in der Vergangenheit» ablehnen kann. Der Link kann dadurch bis zu etwa einen Tag laenger gelten
-     * als eingestellt; genau wird die Frist nur mit [WcmConfig.ncDeleteExpired].
+     * als eingestellt; genau wird die Frist mit [WcmConfig.ncRevokeLinks].
      * Nicht gegen einen echten Server geprueft: das echte Ablaufdatum steht im Logcat (`Nextcloud-Freigabe laeuft ab`).
      */
     internal fun expireDate(hours: Int, now: LocalDateTime = LocalDateTime.now()): String? {
@@ -147,11 +147,11 @@ class NextcloudUploader(
     }
 
     private fun cleanupAsync(config: WcmConfig) {
-        if (!config.ncDeleteExpired || config.ncShareHours <= 0) return
+        if (!config.ncRevokeLinks || config.ncShareHours <= 0) return
         if (!cleanupRunning.compareAndSet(false, true)) return
         cleanupScope.launch {
             try {
-                runCatching { deleteExpired(config) }.onFailure { Log.w(TAG, "Nextcloud-Aufraeumen fehlgeschlagen: ${it.message}") }
+                runCatching { revokeExpiredLinks(config) }.onFailure { Log.w(TAG, "Nextcloud: Links widerrufen fehlgeschlagen: ${it.message}") }
             } finally {
                 cleanupRunning.set(false)
             }
@@ -159,49 +159,52 @@ class NextcloudUploader(
     }
 
     /**
-     * Loescht eigene Fotos im Upload-Ordner, die aelter als die Frist sind. Nur Dateien, die die App selbst so benennt
-     * (`foto-<ms>.jpg`, `test-<ms>.jpg`; das Alter steht im Namen), nur direkt im konfigurierten Ordner und nie im Hauptverzeichnis.
-     * Nextcloud legt geloeschte Dateien zunaechst in den Papierkorb des Benutzers.
+     * Widerruft die oeffentlichen Links eigener Fotos im Upload-Ordner, die aelter als die Frist sind. Das Foto selbst bleibt
+     * in Nextcloud liegen; nur der Link (Freigabe) wird geloescht, danach ergibt der QR-Code «nicht gefunden».
+     * Betroffen sind nur Freigaben vom Typ «Link» (shareType 3) auf Dateien, die die App selbst so benennt
+     * (`foto-<ms>.jpg`, `test-<ms>.jpg`), direkt im konfigurierten Ordner und nie im Hauptverzeichnis.
+     * Das Alter kommt vom Server (`stime` der Freigabe), nicht von der Tablet-Uhr der Aufnahme.
      */
-    private fun deleteExpired(config: WcmConfig) {
+    private fun revokeExpiredLinks(config: WcmConfig) {
         val base = normalize(config.ncUrl)
         val user = config.ncUser.trim()
         val folder = config.ncFolder.trim().trim('/').split('/').filter { it.isNotBlank() }
         if (user.isBlank() || config.ncPassword.isBlank() || folder.isEmpty()) return
         val auth = Credentials.basic(user, config.ncPassword)
 
-        fun davUrl(segments: List<String>) = base.newBuilder().apply {
-            addPathSegments("remote.php/dav/files")
-            addPathSegment(user)
-            segments.forEach { addPathSegment(it) }
-        }.build()
+        fun shares() = base.newBuilder().addPathSegments("ocs/v2.php/apps/files_sharing/api/v1/shares")
 
-        val body = """<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:resourcetype/></d:prop></d:propfind>"""
-            .toRequestBody("application/xml".toMediaType())
-        val listing = Request.Builder().url(davUrl(folder)).header("Authorization", auth).header("Depth", "1")
-            .method("PROPFIND", body).build()
-        val xml = http.newCall(listing).execute().use { r -> if (r.code == 207) r.body?.string().orEmpty() else return }
+        // Alle Freigaben der Dateien direkt im Ordner.
+        val listUrl = shares().addQueryParameter("format", "json")
+            .addQueryParameter("path", "/" + folder.joinToString("/")).addQueryParameter("subfiles", "true").build()
+        val json = http.newCall(Request.Builder().url(listUrl).header("Authorization", auth).header("OCS-APIRequest", "true").get().build())
+            .execute().use { r -> if (r.isSuccessful) r.body?.string().orEmpty() else return }
+        val data = JSONObject(json).getJSONObject("ocs").optJSONArray("data") ?: return
 
-        val limitMs = config.ncShareHours * 3_600_000L
-        val now = System.currentTimeMillis()
-        var deleted = 0
-        for (m in HREF.findAll(xml)) {
-            val name = runCatching { URLDecoder.decode(m.groupValues[1].trimEnd('/').substringAfterLast('/'), "UTF-8") }.getOrNull() ?: continue
-            val takenAt = OWN_FILE.matchEntire(name)?.groupValues?.get(1)?.toLongOrNull() ?: continue
-            if (now - takenAt <= limitMs) continue
-            val del = Request.Builder().url(davUrl(folder + name)).header("Authorization", auth).delete().build()
-            http.newCall(del).execute().use { r -> if (r.code in listOf(204, 404)) deleted++ }
-            if (deleted >= MAX_DELETES_PER_RUN) break
+        val limitSec = config.ncShareHours * 3_600L
+        val nowSec = System.currentTimeMillis() / 1000
+        var revoked = 0
+        for (i in 0 until data.length()) {
+            val share = data.optJSONObject(i) ?: continue
+            if (share.optInt("share_type") != 3) continue
+            val fileName = share.optString("path").substringAfterLast('/')
+            if (!OWN_FILE.matches(fileName)) continue
+            val id = share.optString("id").takeIf { it.isNotBlank() } ?: continue
+            val createdSec = share.optLong("stime", 0L).takeIf { it > 0 } ?: continue
+            if (nowSec - createdSec <= limitSec) continue
+            val del = Request.Builder().url(shares().addPathSegment(id).addQueryParameter("format", "json").build())
+                .header("Authorization", auth).header("OCS-APIRequest", "true").delete().build()
+            http.newCall(del).execute().use { r -> if (r.isSuccessful || r.code == 404) revoked++ }
+            if (revoked >= MAX_REVOKES_PER_RUN) break
         }
-        if (deleted > 0) Log.i(TAG, "Nextcloud: $deleted abgelaufene Fotos geloescht")
+        Log.i(TAG, "Nextcloud: ${data.length()} Freigaben im Ordner, $revoked abgelaufene Links widerrufen")
     }
 
     private companion object {
         const val TAG = "Fotobox"
-        const val MAX_DELETES_PER_RUN = 50
-        val HREF = Regex("<[A-Za-z0-9]*:?href>([^<]*)</[A-Za-z0-9]*:?href>")
-        /** Dateien, die diese App selbst anlegt: Name enthaelt die Aufnahmezeit in Millisekunden. */
-        val OWN_FILE = Regex("(?:foto|test)-(\\d{10,13})\\.jpg")
+        const val MAX_REVOKES_PER_RUN = 50
+        /** Dateien, die diese App selbst anlegt (Name enthaelt die Aufnahmezeit in Millisekunden). */
+        val OWN_FILE = Regex("(?:foto|test)-\\d{10,13}\\.jpg")
     }
 
     private fun checkAuth(step: String, code: Int) {

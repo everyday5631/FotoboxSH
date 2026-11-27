@@ -250,12 +250,12 @@ private fun UploadSection(state: UiState, actions: Actions) {
                 listOf("1 Std." to 1, "6 Std." to 6, "12 Std." to 12, "24 Std." to 24, "2 Tage" to 48, "7 Tage" to 168, "ohne Ablauf" to 0),
                 cfg.ncShareHours,
             ) { actions.onConfigQuiet(cfg.copy(ncShareHours = it)) }
-            SettingSwitch("Fotos nach Ablauf in Nextcloud löschen (Frist stundengenau)", cfg.ncDeleteExpired) {
-                actions.onConfigQuiet(cfg.copy(ncDeleteExpired = it))
+            SettingSwitch("Link nach Ablauf sofort ungültig machen (stundengenau)", cfg.ncRevokeLinks) {
+                actions.onConfigQuiet(cfg.copy(ncRevokeLinks = it))
             }
             Text(
-                "Nextcloud rechnet beim Link-Ablauf nur in ganzen Tagen: ohne das Löschen kann der Link bis zu etwa einen Tag länger gelten. " +
-                    "Gelöscht werden nur Fotos dieser App (foto-…/test-…) direkt im oben genannten Ordner; sie landen zuerst im Papierkorb von Nextcloud.",
+                "Nextcloud rechnet beim Link-Ablauf nur in ganzen Tagen. Mit diesem Schalter widerruft die App abgelaufene Links selbst (nach jedem Upload); " +
+                    "die Fotos bleiben in Nextcloud liegen. Betroffen sind nur Links auf Fotos dieser App (foto-…/test-…) im oben genannten Ordner.",
                 color = Sonn.Stone, fontSize = 12.sp,
             )
         } else {

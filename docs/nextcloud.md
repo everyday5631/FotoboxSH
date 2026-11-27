@@ -45,9 +45,11 @@ Bei einem Fehler steht, welcher Schritt scheiterte:
   - **Grenze von Nextcloud:** Ein Ablaufdatum gilt nur in ganzen **Tagen**. Die App rundet so auf, dass der Link nie früher
     abläuft als eingestellt; er kann dadurch bis zu etwa einen Tag länger gelten. Das tatsächliche Ablaufdatum steht im
     Logcat (Tag `Fotobox`, «Nextcloud-Freigabe laeuft ab»); mit einem echten Server **noch nicht geprüft**.
-  - **Stundengenau:** Schalter *Fotos nach Ablauf in Nextcloud löschen* (standardmässig aus). Die App löscht dann nach jedem
-    erfolgreichen Upload im Hintergrund ihre eigenen Fotos (`foto-<ms>.jpg`, `test-<ms>.jpg`) im Upload-Ordner, die älter als die
-    Frist sind (höchstens 50 pro Durchgang, nur direkt im Ordner, nie im Hauptverzeichnis). Nextcloud legt sie zuerst in den
-    Papierkorb des Benutzers. Voraussetzung: Die Uhr des Tablets stimmt, und das Tablet lädt noch Fotos hoch (ohne Upload kein Aufräumen).
+  - **Stundengenau:** Schalter *Link nach Ablauf sofort ungültig machen* (standardmässig **an**). Die App widerruft dann nach jedem
+    erfolgreichen Upload im Hintergrund die Freigabe-Links ihrer eigenen Fotos (`foto-<ms>.jpg`, `test-<ms>.jpg`) im Upload-Ordner,
+    die älter als die Frist sind (Alter laut Server, höchstens 50 pro Durchgang, nur direkt im Ordner, nie im Hauptverzeichnis).
+    **Die Fotos selbst bleiben in Nextcloud liegen**; wie lange, regelt die Aufbewahrungsregel auf der Nextcloud-Seite.
+    Voraussetzung: Das Tablet lädt noch Fotos hoch (ohne Upload kein Widerruf; das Ablaufdatum des Servers gilt als Netz darunter).
+    Nicht gegen einen echten Server geprüft (Auflisten der Freigaben eines Ordners per OCS `subfiles=true`).
   - Der Server kann zusätzlich ein Standard- oder Höchst-Ablaufdatum erzwingen (*Freigabe → Standardablauf*); das gilt weiterhin.
 - Fotos enthalten Personen: Aufbewahrungsdauer festlegen und am Gerät auf den Datenschutz hinweisen.

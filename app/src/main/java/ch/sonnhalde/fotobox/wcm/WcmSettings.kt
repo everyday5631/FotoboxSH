@@ -61,8 +61,8 @@ data class WcmConfig(
     val ncPassword: String = "",
     /** Gueltigkeit des Download-Links (QR-Code) in Stunden; 0 = kein Ablauf. Nextcloud kennt nur ganze Tage, siehe [NextcloudUploader]. */
     val ncShareHours: Int = DEFAULT_SHARE_HOURS,
-    /** Hochgeladene Fotos nach Ablauf der Gueltigkeit aus dem Nextcloud-Ordner loeschen (macht die Frist stundengenau). */
-    val ncDeleteExpired: Boolean = false,
+    /** Freigabe-Links nach Ablauf der Gueltigkeit widerrufen (Link loeschen, Foto bleibt); macht die Frist stundengenau. */
+    val ncRevokeLinks: Boolean = true,
     val ncFolder: String = "Fotobox",
     val startTitle: String = "Ein Moment für Sie und Ihre Liebsten",
     val startButton: String = "jetzt starten",
@@ -112,7 +112,7 @@ class WcmSettings(context: Context) {
         ncUser = prefs.getString("ncUser", "").orEmpty(),
         ncPassword = prefs.getString("ncPassword", "").orEmpty(),
         ncShareHours = prefs.getInt("ncShareHours", WcmConfig.DEFAULT_SHARE_HOURS).coerceIn(0, 24 * 365),
-        ncDeleteExpired = prefs.getBoolean("ncDeleteExpired", false),
+        ncRevokeLinks = prefs.getBoolean("ncRevokeLinks", true),
         ncFolder = prefs.getString("ncFolder", "Fotobox").orEmpty(),
         startTitle = prefs.getString("startTitle", WcmConfig().startTitle).orEmpty(),
         startButton = prefs.getString("startButton", WcmConfig().startButton).orEmpty(),
@@ -153,7 +153,7 @@ class WcmSettings(context: Context) {
             .putString("ncUser", config.ncUser.trim())
             .putString("ncPassword", config.ncPassword)
             .putInt("ncShareHours", config.ncShareHours.coerceIn(0, 24 * 365))
-            .putBoolean("ncDeleteExpired", config.ncDeleteExpired)
+            .putBoolean("ncRevokeLinks", config.ncRevokeLinks)
             .putString("ncFolder", config.ncFolder.trim().trim('/'))
             .putString("startTitle", Graphemes.take(config.startTitle, 60))
             .putString("startButton", Graphemes.take(config.startButton, 24))
