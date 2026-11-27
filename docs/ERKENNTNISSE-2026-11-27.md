@@ -13,6 +13,7 @@ Entscheidungen und die offene Liste stehen weiterhin in `docs/ENTWICKLUNG.md`; h
    Messung/Dauertest (18) danach. **Druck und Kiosk-Beenden zuletzt testen** (Papier).
 4. Jede Aussage hier ist als gemessen, nachgerechnet oder Annahme gekennzeichnet; bei Bauvorhaben neu prüfen, nicht blind übernehmen.
 5. Offene Fragen an die Nutzerperson stehen in Abschnitt 9.2.
+6. Fertiger Einstiegs-Prompt zum Einfügen: `docs/START-NEUER-CHAT.md`.
 
 **Kennzeichnung der Aussagen**
 
@@ -278,6 +279,10 @@ ist **nicht gemessen** (frühere APKs wurden nicht aufgehoben). Das Release **`d
 11. Das Werkspasswort des WCMPlus in der öffentlichen Doku: **noch nicht** entfernen (Entscheid vertagt).
 12. Reihenfolge der nächsten Arbeit gilt, aber **in einem neuen Chat**.
 13. Frühere Erfahrung mit der gemieteten Box: Fotos blieben meist etwa einen Monat, eher **40 Tage** (siehe 9.2, Aufbewahrung).
+14. **Töne:** echte Tondateien aus einer freien Quelle; als **Rückfall** ein von Android erzeugter Ton (`ToneGenerator` bzw. Systemklang), falls Dateien fehlen oder nicht abspielbar sind.
+15. **Pausierter Drucker (Traktandum 20): Gäste sehen keinen Hinweis** («der Gast braucht das nicht zu wissen»). Auslegung von Claude, in einem neuen Chat kurz bestätigen: Der Druckknopf bleibt wie gewohnt sichtbar,
+    der Auftrag wird still gespeichert und später vom Personal über «Drucker freigeben» gedruckt. Alternative (Knopf ausblenden) wäre auch ohne Hinweis möglich.
+16. **Traktandum 14 (Zugangsdaten sicher ablegen) schliesst die Nutzerperson selbst ab.** Ergebnis steht aus; im neuen Chat nachfragen, was entschieden oder umgesetzt wurde.
 
 ## 9. Offene Traktanden (vollständig, mit Status)
 
@@ -290,7 +295,7 @@ ist **nicht gemessen** (frühere APKs wurden nicht aufgehoben). Das Release **`d
 | 5 | **Speicher:** Foto nach 2–3 Minuten freigeben (faktisch heute 90 s) und Fotos als Datei statt im Arbeitsspeicher halten: erst messen, dann entscheiden (Abschnitt 7.2). | offen |
 | 6 | **Druck als Pflicht (Failsafe):** Druckaufträge dürfen nicht verloren gehen: Aufträge auf dem Speicher ablegen, bei Fehler erneut versuchen, klare Meldung für das Personal. Heute: bei Fehler Meldung und Knopf «Über Android-Druckdialog drucken», keine Warteschlange für Druckaufträge. Upload bleibt davon getrennt. | offen |
 | 7 | **Upload-Warteschlange automatisch senden**, sobald Internet da ist (heute von Hand im Reiter «Warteschlange»). Hängt mit Punkt 6 zusammen. | offen (alte Liste Punkt 6) |
-| 8 | **Töne** (Nutzerperson: «Vorschlag super»): Tick im Countdown, Auslöse-Ton, Ton wenn das Foto fertig ist (Erfolg), evtl. Fehlerton; Schalter im Setup. Die Nutzerperson will **richtige Tondateien**, keine einfachen Pieptöne: aus einer Bibliothek mit **freier Lizenz** (z. B. CC0, wie Kenney oder Freesound mit CC0-Filter; Verfügbarkeit und Lizenz vor dem Einbau prüfen) in `res/raw/`, Quelle und Lizenz im Repo vermerken. `ToneGenerator` nur als Rückfall. | offen |
+| 8 | **Töne** (Nutzerperson: «Vorschlag super»): Tick im Countdown, Auslöse-Ton, Ton wenn das Foto fertig ist (Erfolg), evtl. Fehlerton; Schalter im Setup. Die Nutzerperson will **richtige Tondateien**, keine einfachen Pieptöne: aus einer Bibliothek mit **freier Lizenz** (z. B. CC0, wie Kenney oder Freesound mit CC0-Filter; Verfügbarkeit und Lizenz vor dem Einbau prüfen) in `res/raw/`, Quelle und Lizenz im Repo vermerken. **Rückfall:** von Android erzeugter Ton (`ToneGenerator`/Systemklang), falls Dateien fehlen oder nicht abspielbar sind. Entschieden. | offen, entschieden |
 | 9 | **Benutzerdefinitionen / Vermietung:** eigenes Logo je Verwendung (hell: Start und Foto-Banner; dunkelblau: Kopfbalken), Texte, ggf. Farben, eigener Reiter im Setup. Das Icon ist zur Build-Zeit fest (Sonderfall). | offen, nicht dringend |
 | 10 | **Banner:** Transparenz und Druck auf Papier prüfen. Stand 27.11.: **eigenes Logo im Banner getestet und in Ordnung**; **Transparenz noch nicht getestet**; Druck folgt zuletzt. | offen (Transparenz, Druck) |
 | 11 | **Freistellung weiter beobachten:** Gruppen, blonde/helle Haare mit unveränderten Originalfotos, grosse Personenfläche; ggf. anderes Modell (Abschnitt 5.5). | offen |
@@ -327,7 +332,8 @@ ist **nicht gemessen** (frühere APKs wurden nicht aufgehoben). Das Release **`d
 - *Ablauf:*
   1. Knopf **«Drucker pausieren»**: Die App sendet nichts mehr an den Drucker. Ein laufender Auftrag wird abgewartet (mit Zeitgrenze) oder abgebrochen. Neue Druckwünsche von Gästen landen in einer **dauerhaften Druckwarteschlange**
      (Foto, Anzahl Abzüge, Zeit). Die App meldet «Sie können den Drucker jetzt ausschalten oder trennen» erst, wenn nichts mehr in Arbeit ist.
-  2. Gästen zeigt der Ergebnis-Bildschirm statt «DRUCKEN» einen Hinweis, dass das Foto später gedruckt wird (Wortlaut zu klären; Alternative: Druckknopf ausblenden).
+  2. **Gäste sehen keinen Hinweis** (Entscheid der Nutzerperson: «der Gast braucht das nicht zu wissen»). Auslegung: Der Druckknopf bleibt wie gewohnt, der Auftrag wird still gespeichert; die Nutzerperson soll im neuen Chat bestätigen, dass
+     das gemeint ist (Alternative: Knopf ausblenden).
   3. Knopf **«Drucker freigeben»**: Die App verbindet neu (inklusive WLAN-Wechsel), liest den Druckerstatus (IPP `printer-state`, `printer-state-reasons`, z. B. Papier leer) und sendet die wartenden Aufträge **der Reihe nach**.
      Fortschritt «3 von 5», Fehlgeschlagenes bleibt in der Warteschlange.
 - *Grenzen (ehrlich):* Die App kann den Drucker **nicht selbst ausschalten** und nicht neu starten. Aufträge, die der WCMPlus oder der DNP schon angenommen hat, kann die App nur abbrechen, wenn WCMPlus die IPP-Befehle für das Abbrechen von Aufträgen
@@ -337,7 +343,7 @@ ist **nicht gemessen** (frühere APKs wurden nicht aufgehoben). Das Release **`d
 - *Tests:* Papierrolle bei den Tests knapp; Test nach den anderen Punkten und möglichst mit wenigen Abzügen.
 
 ### 9.2 Offene Fragen an die Nutzerperson und Befunde
-- **Pausierter Drucker (Traktandum 20):** Sollen Gäste auf dem Ergebnis-Bildschirm einen **Hinweis** («Ihr Foto wird später gedruckt») sehen oder soll der **Druckknopf ausgeblendet** werden? Claudes Empfehlung: Hinweis. **Unbeantwortet**, wegen Unklarheit bei der Nutzerperson (die Nummern waren in der Pull-Request-Ansicht nicht sichtbar; Traktanden stehen in der Datei dieses Dokuments und jetzt auch in der PR-Beschreibung).
+- **Pausierter Drucker (Traktandum 20):** **Beantwortet:** kein Hinweis für Gäste. Offen nur die Feinheit, ob der Druckknopf dann sichtbar bleibt (Claudes Auslegung, still speichern) oder ausgeblendet wird; kurz bestätigen lassen.
 - **Aufbewahrung, Klärung nötig:** Die Nutzerperson nannte als Erfahrung der gemieteten Box «meist um einen Monat, eher 40 Tage». Unklar ist, **was** damals so lange blieb: die Fotos auf dem Gerät, die Download-Links oder die Dateien in der Cloud?
   Für den **Foto-Verlauf auf dem Tablet** (Traktandum 16) sind 40 Tage mehr als nötig und aus Datenschutzgründen eher zu lang; für die **Download-Links** (QR-Code) wäre ein fester Ablauf sinnvoll.
 - **Befund Nextcloud (aus dem Code, nachgerechnet):** `NextcloudUploader` legt den öffentlichen Link **ohne Ablaufdatum** an (nur `path`, `shareType=3`, `permissions=1`, kein `expireDate`, kein Passwort). Wie lange ein QR-Link gilt, bestimmt also allein
@@ -354,6 +360,16 @@ Ob es entfernt wird (und die Historie bereinigt), ist offen. Keine neuen Zugangs
 3. Setup → Konfiguration → Foto – Hintergrund: «Haarmodell verwenden» aus und an; die Diagnose-Zeile nennt die Dauer; Log zeigt «Haarmodell an/aus».
 4. Stresstest wie 7.3, Log mit `./adb logcat -d -s Fotobox:V AndroidRuntime:E`.
 5. Blondes Originalfoto (Wahl «Original», ungeschwärzt) für Modellvergleiche mitschicken, wenn möglich.
+
+## 10a. Lehren aus dieser Sitzung (Fehler von Claude und was daraus folgt)
+
+- **Zu früh «alles grün» gemeldet:** Ein Kompilierfehler (`DoubleArray` mit `Float`) wurde erst nach der Meldung bemerkt; der Pull-Request-Lauf war grün, der Push-Lauf nicht. **Beide Läufe prüfen**, Log lesen, erst dann melden.
+- **Windows-Befehle für ADB** statt Linux: Vorher fragen, welches System, oder aus Screenshots ablesen.
+- **Falsche Vermutung zur Haar-Erkennung:** Das Haarmodell wurde auf Verdacht als «grösster Hebel» empfohlen; Messung auf dem Tablet zeigte fast keinen Beitrag. **Erst messen, dann bauen**; das Log-Schema (`Haarmodell … zur Maske ergaenzt`) war dafür der Gewinn.
+- **Testbilder verfälschen:** Geschwärzte oder freigestellte Screenshots eignen sich nicht für Modell-Tests; Originalfotos verlangen.
+- **Zahlen und Begriffe der Nutzerperson übernehmen** («Entwicklermodus» = Setup), Unklarheiten kurz zurückfragen statt raten.
+- **Nachrichten bündeln:** Die Nutzerperson antwortet pro Nachricht und schreibt oft mitten im Satz weiter.
+- **Kein Merge, kein Release durch Claude** (Regel in `CLAUDE.md`); Entwürfe für PRs.
 
 ## 11. Anhang
 
