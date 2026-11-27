@@ -66,6 +66,12 @@ data class WcmConfig(
     val ncFolder: String = "Fotobox",
     val startTitle: String = "Ein Moment für Sie und Ihre Liebsten",
     val startButton: String = "jetzt starten",
+    /** Zeit ohne Eingabe auf dem Ergebnis-Bildschirm, nach der es zurueck zum Start geht (pausiert waehrend des Druckens). */
+    val resultTimeoutSeconds: Int = 90,
+    /** Foto-Verlauf: so viele Fotos bleiben auf dem Tablet ... */
+    val historyCount: Int = 6,
+    /** ... hoechstens so viele Stunden (aelteres wird geloescht). */
+    val historyHours: Int = 24,
 ) {
     companion object {
         /** Standardadresse des WCMPlus-Portals (laut Anleitung 192.168.4.1). */
@@ -116,6 +122,9 @@ class WcmSettings(context: Context) {
         ncFolder = prefs.getString("ncFolder", "Fotobox").orEmpty(),
         startTitle = prefs.getString("startTitle", WcmConfig().startTitle).orEmpty(),
         startButton = prefs.getString("startButton", WcmConfig().startButton).orEmpty(),
+        resultTimeoutSeconds = prefs.getInt("resultTimeoutSeconds", 90).coerceIn(20, 600),
+        historyCount = prefs.getInt("historyCount", 6).coerceIn(1, 50),
+        historyHours = prefs.getInt("historyHours", 24).coerceIn(1, 720),
     )
 
     fun save(config: WcmConfig) {
@@ -157,6 +166,9 @@ class WcmSettings(context: Context) {
             .putString("ncFolder", config.ncFolder.trim().trim('/'))
             .putString("startTitle", Graphemes.take(config.startTitle, 60))
             .putString("startButton", Graphemes.take(config.startButton, 24))
+            .putInt("resultTimeoutSeconds", config.resultTimeoutSeconds.coerceIn(20, 600))
+            .putInt("historyCount", config.historyCount.coerceIn(1, 50))
+            .putInt("historyHours", config.historyHours.coerceIn(1, 720))
             .apply()
     }
 }

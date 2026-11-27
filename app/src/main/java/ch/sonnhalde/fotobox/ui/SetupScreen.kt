@@ -59,8 +59,12 @@ import ch.sonnhalde.fotobox.photo.PhotoComposer
 import ch.sonnhalde.fotobox.wcm.WcmStatus
 import kotlin.math.roundToInt
 
+/**
+ * Reihenfolge von links nach rechts: je weiter links, desto technischer (einmal einrichten),
+ * je weiter rechts, desto naeher am Alltag (je Anlass anpassen, Fotos ansehen).
+ */
 enum class SetupTab(val label: String) {
-    Config("Konfiguration"), Camera("Kamera"), Printer("Drucker"), Queue("Warteschlange"), Wifi("WLAN"),
+    System("System"), Printer("Drucker"), Upload("QR & Upload"), Camera("Kamera"), Flow("Ablauf"), Look("Aussehen"), Photos("Fotos"),
 }
 
 /**
@@ -69,7 +73,7 @@ enum class SetupTab(val label: String) {
  */
 @Composable
 fun SetupScreen(state: UiState, actions: Actions) {
-    var tab by rememberSaveable { mutableStateOf(SetupTab.Config) }
+    var tab by rememberSaveable { mutableStateOf(SetupTab.Look) }
     var askExit by remember { mutableStateOf(false) }
     if (askExit) {
         PinDialog(title = "App beenden", onDismiss = { askExit = false },
@@ -92,7 +96,12 @@ fun SetupScreen(state: UiState, actions: Actions) {
                 for (t in SetupTab.values()) {
                     val active = t == tab
                     Text(
-                        t.label + if (t == SetupTab.Queue && state.queueCount > 0) " (${state.queueCount})" else "",
+                        t.label + when {
+                            t == SetupTab.Upload && state.queueCount > 0 -> " (${state.queueCount})"
+                            // Hinweis fuer das Personal: ein Foto wurde nicht gedruckt.
+                            t == SetupTab.Photos && state.history.any { it.printStatus == "failed" } -> " (!)"
+                            else -> ""
+                        },
                         color = if (active) Sonn.Navy else Color(0xFFC8D2DC), fontWeight = FontWeight.Bold, fontSize = 14.sp,
                         modifier = Modifier.clip(MaterialShape).background(if (active) Sonn.HeadingGold else Color.Transparent)
                             .clickable { tab = t }.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -117,7 +126,13 @@ fun SetupScreen(state: UiState, actions: Actions) {
         ) {
             state.message?.let { Notice(it) }
             when (tab) {
-                SetupTab.Config -> ConfigTab(state, actions)
+                SetupTab.System -> SystemTab(state, actions)
+                SetupTab.Printer -> {
+                    ConnectionSection(state, actions.onConfigChange, actions.onCheckConnection, actions.onTestPrinter)
+                    PrinterWifiSection(state, actions)
+                    PrintFormatSection(state, actions)
+                }
+                SetupTab.Upload -> UploadTab(state, actions)
                 SetupTab.Camera -> {
                     SectionTitle("Kamera", "Kamera-Einstellungen")
                     CameraSetupPanel(
@@ -127,33 +142,9 @@ fun SetupScreen(state: UiState, actions: Actions) {
                         onZoom = { actions.onConfigQuiet(cfg.copy(zoomRatio = it)) },
                     )
                 }
-                SetupTab.Printer -> {
-                    ConnectionSection(state, actions.onConfigChange, actions.onCheckConnection, actions.onTestPrinter)
-                    PrinterWifiSection(state, actions)
-                    PrintFormatSection(state, actions)
-                }
-                SetupTab.Queue -> {
-                    SectionTitle("SharePoint", "Upload-Warteschlange")
-                    StatusLine(if (state.queueCount == 0) Sonn.Ok else Sonn.Error, "Wartende Fotos: ${state.queueCount}")
-                    Text("Fotos, die nicht hochgeladen werden konnten (z. B. kein Internet), warten hier und werden erneut gesendet.", color = Sonn.Stone)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SonnButton("Jetzt senden", primary = true, onClick = actions.onRetryQueue)
-                        SonnButton("Warteschlange leeren", primary = false, onClick = actions.onClearQueue)
-                    }
-                }
-                SetupTab.Wifi -> {
-                    SectionTitle("Netzwerk", "WLAN")
-                    Text("Tablet und WCMPlus müssen im selben WLAN sein. Das Netz des WCMPlus-Moduls heisst «WCMPLUS-…»; nach der Einrichtung hängt es im lokalen WLAN.", color = Sonn.Stone)
-                    SonnButton("Android-WLAN-Einstellungen öffnen", primary = true, onClick = actions.onOpenWifi)
-                    val (dot, text) = when (val s = state.status) {
-                        WcmStatus.Unknown -> Sonn.Stone to "WCMPlus: noch nicht geprüft"
-                        WcmStatus.Checking -> Sonn.Stone to "WCMPlus: wird geprüft …"
-                        is WcmStatus.Online -> Sonn.Ok to ("WCMPlus: verbunden" + (s.via?.let { " ($it)" } ?: ""))
-                        is WcmStatus.Offline -> Sonn.Error to "WCMPlus: nicht erreichbar"
-                    }
-                    StatusLine(dot, text)
-                    SonnButton("Erneut prüfen", primary = false, onClick = actions.onCheckConnection)
-                }
+                SetupTab.Flow -> FlowTab(state, actions)
+                SetupTab.Look -> LookTab(state, actions)
+                SetupTab.Photos -> HistoryTab(state, actions)
             }
         }
 
@@ -171,7 +162,7 @@ fun SetupScreen(state: UiState, actions: Actions) {
 }
 
 @Composable
-private fun <T> ChoiceRow(label: String, options: List<Pair<String, T>>, selected: T, onSelect: (T) -> Unit) {
+internal fun <T> ChoiceRow(label: String, options: List<Pair<String, T>>, selected: T, onSelect: (T) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(label, fontWeight = FontWeight.Bold, fontSize = 14.sp)
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -273,11 +264,11 @@ private fun UploadSection(state: UiState, actions: Actions) {
     }
 }
 
+/** Aussehen: was die Gaeste sehen (Banner, Foto-Hintergruende, Startbildschirm). Wird je Anlass angepasst. */
 @Composable
-private fun ConfigTab(state: UiState, actions: Actions) {
+private fun LookTab(state: UiState, actions: Actions) {
     val context = LocalContext.current
     val cfg = state.config
-    var newPin by remember { mutableStateOf("") }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionTitle("Foto", "Banner unten")
@@ -326,7 +317,9 @@ private fun ConfigTab(state: UiState, actions: Actions) {
         }
     }
 
+
     BackgroundSection(state, actions)
+
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionTitle("Retail-Modus", "Startbildschirm")
@@ -339,6 +332,13 @@ private fun ConfigTab(state: UiState, actions: Actions) {
         }
     }
 
+}
+
+/** Ablauf fuer die Gaeste: Timer, Auto-Druck, Zeitlimit. */
+@Composable
+private fun FlowTab(state: UiState, actions: Actions) {
+    val cfg = state.config
+
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionTitle("Ablauf", "Timer und Druck")
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -348,17 +348,79 @@ private fun ConfigTab(state: UiState, actions: Actions) {
             }
         }
         SettingSwitch("Foto automatisch drucken (1 Abzug)", cfg.autoPrint) { actions.onConfigQuiet(cfg.copy(autoPrint = it)) }
+
+        var timeout by remember(cfg.resultTimeoutSeconds) { mutableFloatStateOf(cfg.resultTimeoutSeconds.toFloat()) }
+        val timeoutShown = (timeout / 10).roundToInt() * 10
+        Text("Ergebnis-Bildschirm: zurück zum Start nach $timeoutShown s ohne Eingabe", fontWeight = FontWeight.Bold)
+        Slider(
+            value = timeout, onValueChange = { timeout = it },
+            onValueChangeFinished = { actions.onConfigQuiet(cfg.copy(resultTimeoutSeconds = (timeout / 10).roundToInt() * 10)) },
+            valueRange = 30f..300f, steps = 26,
+            colors = SliderDefaults.colors(thumbColor = Sonn.Navy, activeTrackColor = Sonn.HeadingGold),
+        )
+        Text("Solange gedruckt wird, läuft die Zeit nicht ab (höchstens 5 Minuten pro Druckschritt).", color = Sonn.Stone, fontSize = 12.sp)
     }
 
+}
+
+/** Upload-Ziel, wartende Uploads und QR-Code von Hand. */
+@Composable
+private fun UploadTab(state: UiState, actions: Actions) {
     UploadSection(state, actions)
 
+    QueueSection(state, actions)
+
     QrSection(state, actions.onQrInput, actions.onGenerate, actions.onDownload)
+
+}
+
+/** Wartende Uploads (heute nur fehlgeschlagene Uploads; Druckauftraege stehen im Reiter «Fotos»). */
+@Composable
+private fun QueueSection(state: UiState, actions: Actions) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionTitle("Download", "Upload-Warteschlange")
+        StatusLine(if (state.queueCount == 0) Sonn.Ok else Sonn.Error, "Wartende Fotos: ${state.queueCount}")
+        Text("Fotos, die nicht hochgeladen werden konnten (z. B. kein Internet), warten hier und werden erneut gesendet. Nicht gedruckte Fotos stehen im Reiter «Fotos».", color = Sonn.Stone)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SonnButton("Jetzt senden", primary = true, onClick = actions.onRetryQueue)
+            SonnButton("Warteschlange leeren", primary = false, onClick = actions.onClearQueue)
+        }
+    }
+}
+
+/** System: Technik, die man einmal einrichtet (Netzwerk, Sicherheit, Freistellungs-Technik). */
+@Composable
+private fun SystemTab(state: UiState, actions: Actions) {
+    val context = LocalContext.current
+    var newPin by remember { mutableStateOf("") }
+
+    WifiSection(state, actions)
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionTitle("Sicherheit", "PIN für Retail-Modus und Beenden")
         Text("Kiosk: " + if (Kiosk.isDeviceOwner(context)) "Device Owner (volle Sperre)" else "kein Device Owner – nur «Bildschirm fixieren»", color = Sonn.Stone, fontSize = 13.sp)
         SonnField("Neue PIN (mind. 4 Zeichen)", newPin, KeyboardType.NumberPassword) { newPin = it }
         SonnButton("PIN speichern", primary = false, onClick = { actions.onSetPin(newPin); newPin = "" })
+    }
+
+    ProcessingSection(state, actions)
+}
+
+/** Netzwerk: Android-WLAN und WCMPlus-Status. */
+@Composable
+private fun WifiSection(state: UiState, actions: Actions) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionTitle("Netzwerk", "WLAN")
+        Text("Tablet und WCMPlus müssen im selben WLAN sein. Das Netz des WCMPlus-Moduls heisst «WCMPLUS-…»; nach der Einrichtung hängt es im lokalen WLAN.", color = Sonn.Stone)
+        SonnButton("Android-WLAN-Einstellungen öffnen", primary = true, onClick = actions.onOpenWifi)
+        val (dot, text) = when (val s = state.status) {
+            WcmStatus.Unknown -> Sonn.Stone to "WCMPlus: noch nicht geprüft"
+            WcmStatus.Checking -> Sonn.Stone to "WCMPlus: wird geprüft …"
+            is WcmStatus.Online -> Sonn.Ok to ("WCMPlus: verbunden" + (s.via?.let { " ($it)" } ?: ""))
+            is WcmStatus.Offline -> Sonn.Error to "WCMPlus: nicht erreichbar"
+        }
+        StatusLine(dot, text)
+        SonnButton("Erneut prüfen", primary = false, onClick = actions.onCheckConnection)
     }
 }
 
@@ -406,6 +468,16 @@ private fun BackgroundSection(state: UiState, actions: Actions) {
             else "Gäste sehen keine Auswahl; es gilt immer das Bild oben.",
             color = Sonn.Stone, fontSize = 12.sp,
         )
+        Text("Die mitgelieferten Bilder sind Platzhalter in den Sonnhalde-Farben; eigene Bilder lassen sich hinzufügen und wieder löschen.", color = Sonn.Stone, fontSize = 12.sp)
+    }
+}
+
+/** Technik der Freistellung: Haarmodell und Diagnose-Zeile (fuer Tests und Fehlersuche). */
+@Composable
+private fun ProcessingSection(state: UiState, actions: Actions) {
+    val cfg = state.config
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionTitle("Foto", "Freistellung (technisch)")
         SettingSwitch("Haarmodell verwenden", cfg.backgroundHairModel) { actions.onConfigQuiet(cfg.copy(backgroundHairModel = it)) }
         Text(
             if (cfg.backgroundHairModel) "Ergänzt Haare bei der Freistellung, braucht etwas mehr Rechenzeit. Ausschalten, wenn das Foto zu lange dauert; es gilt dann nur die Personen-Erkennung."
@@ -414,7 +486,6 @@ private fun BackgroundSection(state: UiState, actions: Actions) {
         )
         SettingSwitch("Diagnose-Zeile zum Hintergrund auf dem Ergebnis (für Tests)", cfg.backgroundDiagnostics) { actions.onConfigQuiet(cfg.copy(backgroundDiagnostics = it)) }
         Text("Zeigt nach jedem Foto, welcher Hintergrund galt, wie viel des Bildes als Person erkannt wurde und wie lange die Freistellung gedauert hat. Im Einsatz ausschalten.", color = Sonn.Stone, fontSize = 12.sp)
-        Text("Die mitgelieferten Bilder sind Platzhalter in den Sonnhalde-Farben; eigene Bilder lassen sich hinzufügen und wieder löschen.", color = Sonn.Stone, fontSize = 12.sp)
     }
 }
 
