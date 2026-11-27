@@ -245,8 +245,9 @@ private fun UploadSection(state: UiState, actions: Actions) {
                 actions.onConfigQuiet(cfg.copy(ncRevokeLinks = it))
             }
             Text(
-                "Nextcloud rechnet beim Link-Ablauf nur in ganzen Tagen. Mit diesem Schalter widerruft die App abgelaufene Links selbst (nach jedem Upload); " +
-                    "die Fotos bleiben in Nextcloud liegen. Betroffen sind nur Links auf Fotos dieser App (foto-…/test-…) im oben genannten Ordner.",
+                "Nextcloud selbst kennt nur ganze Tage (die Anzeige dort zeigt immer «23:59 Uhr»). Mit diesem Schalter widerruft die App jeden Link " +
+                    "zur eingestellten Zeit selbst (solange die App läuft, sonst beim nächsten Upload); die Fotos bleiben in Nextcloud liegen. " +
+                    "Betroffen sind nur Links auf Fotos dieser App (foto-…/test-…) im oben genannten Ordner.",
                 color = Sonn.Stone, fontSize = 12.sp,
             )
         } else {
