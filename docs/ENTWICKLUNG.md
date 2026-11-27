@@ -62,6 +62,12 @@ Stand: erstes Release `v0.1.36` (Commit `16df1e6`), getestet auf Xiaomi-Tablet m
   Im Live-Bild liegt der gewählte Hintergrund nur halbtransparent über der Kamera (Andeutung, keine Freistellung). Bei Fehlern der Erkennung oder fehlendem Bild bleibt das Originalfoto;
   der Grund steht als Hinweis auf dem Ergebnis-Bildschirm (`UiState.backgroundNote`) und im Logcat (Tag `Fotobox`, auch Personenanteil), ebenso «keine Person erkannt» (<1 %) und «ganzes Bild als Person» (>97 %). Haare, Hände und Gruppen
   sind die Schwachstellen des Modells; Randqualität nur auf dem Tablet beurteilbar.
+  Stand 27.11.2026: Personen-Erkennung in zwei Durchgängen (ganzes Bild, dann Ausschnitt um die Personen), Ränder mit Guided Filter an die Fotokanten
+  gelegt (`photo/MaskMath.kt`), dazu ein Haarmodell (`photo/HairModel.kt`, TensorFlow Lite). Das Haarmodell ist Googles MediaPipe `hair_segmenter.tflite`
+  (512 x 512, 0,8 MB, `app/src/main/assets/models/`; Quelle `storage.googleapis.com/mediapipe-models/image_segmenter/hair_segmenter/float32/latest/`,
+  SHA-256 `2628cf3c…bf84`). Eingang RGB plus leerer 4. Kanal, Ausgang Logits (Hintergrund/Haar). Lizenz laut Modellkarte vor einer Weitergabe prüfen.
+  Auf einem sauberen Porträt ergänzt das Haarmodell fast nichts (das Selfie-Modell findet die Haare schon); der Nutzen auf dem Tablet ist offen. Logcat-Tag `Fotobox`
+  zeigt Dauer und Beitrag (`Haarmodell … zur Maske ergaenzt`). Die Schwellen nach dem Filter (0.40/0.60) sind bewusst eng: breitere Bänder verwischen den Rand.
 
 ## Offene Punkte (Reihenfolge nach Wunsch der Nutzerperson)
 
